@@ -1,0 +1,28 @@
+# Local secrets and generated exports
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.p12
+*.key
+*.crt
+*.cer
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.azure/
+secrets/
+exports/
+backups/
+
+# Build / runtime
+node_modules/
+.next/
+dist/
+coverage/
+*.log
+.tmp/
+.DS_Store
+.idea/

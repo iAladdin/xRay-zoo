@@ -1,0 +1,38 @@
+{
+  "apiVersion": "xray-zoo/v1alpha1",
+  "kind": "PlanVersion",
+  "planKey": "starter",
+  "version": 1,
+  "status": "draft",
+  "name": "Starter 示例套餐",
+  "billing": {
+    "currency": "USD",
+    "amountMinor": 999,
+    "interval": "month",
+    "intervalCount": 1,
+    "trialDays": 0,
+    "automaticRenewal": true
+  },
+  "entitlement": {
+    "quotaBytes": 20000000000,
+    "displayUnit": "GB",
+    "bytesPerDisplayUnit": 1000000000,
+    "metering": "upload-plus-download",
+    "resetPolicy": "paid-service-period",
+    "nodePoolRefs": [
+      "standard"
+    ],
+    "strictDeviceLimit": null
+  },
+  "lifecycle": {
+    "cancelPolicy": "end-of-paid-period",
+    "failedRenewalGraceSeconds": 0,
+    "quotaExhaustionPolicy": "suspend-access",
+    "planChangePolicy": "next-paid-period"
+  },
+  "notes": [
+    "价格与额度仅展示字段，未完成商用定价",
+    "多个地区共享一份额度",
+    "支付渠道商品/价格 ID 在实际发布时绑定"
+  ]
+}

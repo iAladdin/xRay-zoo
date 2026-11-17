@@ -1,0 +1,86 @@
+{
+  "checked_on": "2026-11-17",
+  "method": "Public GitHub repository metadata plus README/license/selected API contract review; not deployment testing",
+  "repositories": [
+    {
+      "repository": "remnawave/backend",
+      "url": "https://github.com/remnawave/backend",
+      "default_branch": "main",
+      "language": "TypeScript",
+      "last_push_at": "2026-11-16T21:21:27Z",
+      "archived": false,
+      "license_spdx": "AGPL-3.0",
+      "description": "Backend component for Remnawave. Learn more at https://docs.rw"
+    },
+    {
+      "repository": "remnawave/node",
+      "url": "https://github.com/remnawave/node",
+      "default_branch": "main",
+      "language": "TypeScript",
+      "last_push_at": "2026-11-15T20:50:01Z",
+      "archived": false,
+      "license_spdx": "AGPL-3.0",
+      "description": "Node component for Remnawave. Learn more at: https://docs.rw"
+    },
+    {
+      "repository": "Gozargah/Marzban",
+      "url": "https://github.com/Gozargah/Marzban",
+      "default_branch": "master",
+      "language": "Python",
+      "last_push_at": "2026-11-02T05:42:58Z",
+      "archived": false,
+      "license_spdx": "AGPL-3.0",
+      "description": "Unified GUI Censorship Resistant Solution Powered by Xray"
+    },
+    {
+      "repository": "Gozargah/Marzban-node",
+      "url": "https://github.com/Gozargah/Marzban-node",
+      "default_branch": "master",
+      "language": "Python",
+      "last_push_at": "2025-03-22T06:29:40Z",
+      "archived": false,
+      "license_spdx": "AGPL-3.0",
+      "description": "Proxy Node for Marzban"
+    },
+    {
+      "repository": "cedar2025/Xboard",
+      "url": "https://github.com/cedar2025/Xboard",
+      "default_branch": "master",
+      "language": "PHP",
+      "last_push_at": "2026-11-02T09:18:16Z",
+      "archived": false,
+      "license_spdx": "MIT",
+      "description": "High-performance panel based on V2board secondary development supporting new protocols and new features"
+    },
+    {
+      "repository": "MHSanaei/3x-ui",
+      "url": "https://github.com/MHSanaei/3x-ui",
+      "default_branch": "main",
+      "language": "Go",
+      "last_push_at": "2026-11-13T18:59:34Z",
+      "archived": false,
+      "license_spdx": "GPL-3.0",
+      "description": "Supporting multi-protocol multi-user(Vmess, Vless, Trojan, ShadowSocks, Wireguard, Hysteria, Tunnel, Mixed, HTTP, Tun, MTProto، AmneziaWG) "
+    },
+    {
+      "repository": "XTLS/Xray-core",
+      "url": "https://github.com/XTLS/Xray-core",
+      "default_branch": "main",
+      "language": "Go",
+      "last_push_at": "2026-11-17T15:48:23Z",
+      "archived": false,
+      "license_spdx": "MPL-2.0",
+      "description": "Xray, Penetrates Everything. Also the best v2ray-core. Where the magic happens. An open platform for various uses."
+    },
+    {
+      "repository": "XrayR-project/XrayR",
+      "url": "https://github.com/XrayR-project/XrayR",
+      "default_branch": "master",
+      "language": null,
+      "last_push_at": "2026-07-02T19:01:49Z",
+      "archived": false,
+      "license_spdx": null,
+      "description": "项目已废弃"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "apiVersion": "xray-zoo/v1alpha1",
+  "kind": "ClusterBlueprint",
+  "metadata": {
+    "name": "starter-three-regions",
+    "environment": "development"
+  },
+  "spec": {
+    "cloudConnectionRef": "${CLOUD_CONNECTION_REF}",
+    "resourceGroup": "xray-zoo-dev",
+    "nodeEngine": "remnawave",
+    "imagePolicy": {
+      "family": "ubuntu-lts-x64",
+      "version": "${VERIFIED_IMAGE_VERSION}"
+    },
+    "regions": [
+      {
+        "location": "eastus2",
+        "displayName": "美国东部",
+        "nodeCount": 1,
+        "vmSize": "Standard_B2ats_v2",
+        "nodePool": "standard"
+      },
+      {
+        "location": "japaneast",
+        "displayName": "日本东部",
+        "nodeCount": 1,
+        "vmSize": "Standard_B2ats_v2",
+        "nodePool": "standard"
+      },
+      {
+        "location": "southeastasia",
+        "displayName": "东南亚",
+        "nodeCount": 1,
+        "vmSize": "Standard_B2ats_v2",
+        "nodePool": "standard"
+      }
+    ],
+    "disk": {
+      "sku": "StandardSSD_LRS",
+      "sizeGiB": 32
+    },
+    "network": {
+      "publicIpSku": "Standard",
+      "publicIpAllocation": "Static",
+      "clientTcpPort": 443,
+      "ipv6Enabled": false,
+      "sshPublicAccess": false,
+      "managementSourceCidrs": [
+        "${CONTROL_PLANE_IPV4_CIDR}"
+      ]
+    },
+    "protocol": {
+      "name": "vless",
+      "transport": "tcp",
+      "security": "reality",
+      "flow": "xtls-rprx-vision",
+      "profileRef": "${VERIFIED_ENGINE_PROFILE_REF}"
+    },
+    "limits": {
+      "maxNodes": 3,
+      "monthlyInfrastructureCeilingUsd": 100,
+      "estimatedMonthlyEgressGb": 100,
+      "behaviorOnPlanLimit": "reject-new-resources"
+    },
+    "releasePolicy": {
+      "publishAfterProbe": true,
+      "allowPartialDeployment": true
+    },
+    "tags": {
+      "managed-by": "xray-zoo",
+      "purpose": "development"
+    }
+  },
+  "notes": [
+    "设计示例，不可直接执行",
+    "1 GiB 规格仅用于技术验证",
+    "区域/SKU/镜像必须按实际 Azure 订阅预检",
+    "预算不构成运行费用硬上限",
+    "不含用户接入凭证、云秘密、节点私钥或上游全局 API token"
+  ]
+}

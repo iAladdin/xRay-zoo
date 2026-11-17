@@ -1,0 +1,192 @@
+{
+  "checked_on": "2026-11-18",
+  "source": "https://prices.azure.com/api/retail/prices",
+  "results": [
+    {
+      "query": "serviceName eq 'Virtual Machines' and armRegionName eq 'eastus2' and armSkuName eq 'Standard_B2ats_v2' and priceType eq 'Consumption'",
+      "items": [
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Virtual Machines Basv2 Series",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.0094,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "4641c79b-979c-5c5a-a9d2-ffc4a86b29db"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Basv2 Series Cloud Services",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.0186,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "a281d1b6-b5d0-5af0-8f3f-e960c913b4fa"
+        }
+      ],
+      "pagination_complete": true
+    },
+    {
+      "query": "serviceName eq 'Virtual Machines' and armRegionName eq 'japaneast' and armSkuName eq 'Standard_B2ats_v2' and priceType eq 'Consumption'",
+      "items": [
+        {
+          "armRegionName": "japaneast",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Basv2 Series Cloud Services",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.0215,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "200e2865-7c71-5b3c-bd98-2fd9982cec20"
+        },
+        {
+          "armRegionName": "japaneast",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Virtual Machines Basv2 Series",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.0123,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "292526e9-9a4d-552e-aa27-deffac02ebca"
+        }
+      ],
+      "pagination_complete": true
+    },
+    {
+      "query": "serviceName eq 'Virtual Machines' and armRegionName eq 'southeastasia' and armSkuName eq 'Standard_B2ats_v2' and priceType eq 'Consumption'",
+      "items": [
+        {
+          "armRegionName": "southeastasia",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Virtual Machines Basv2 Series",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.0118,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "7fd85adf-5d0b-5f12-a3e8-8b50df4a6543"
+        },
+        {
+          "armRegionName": "southeastasia",
+          "armSkuName": "Standard_B2ats_v2",
+          "productName": "Basv2 Series Cloud Services",
+          "skuName": "B2ats v2",
+          "meterName": "B2ats v2",
+          "retailPrice": 0.021,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2023-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "fe27b331-8c70-5dca-8add-0372298a4a49"
+        }
+      ],
+      "pagination_complete": true
+    },
+    {
+      "query": "serviceName eq 'Virtual Network' and armRegionName eq 'eastus2' and priceType eq 'Consumption'",
+      "items": [
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "IP Addresses",
+          "skuName": "Standard",
+          "meterName": "Standard IPv4 Static Public IP",
+          "retailPrice": 0.005,
+          "unitOfMeasure": "1 Hour",
+          "effectiveStartDate": "2018-06-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "9c150bf9-2bad-430e-a53c-c213804f49ef"
+        }
+      ],
+      "pagination_complete": true
+    },
+    {
+      "query": "serviceName eq 'Storage' and armRegionName eq 'eastus2' and contains(productName, 'Standard SSD') and priceType eq 'Consumption'",
+      "items": [
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 ZRS",
+          "meterName": "E4 ZRS Disk Operations",
+          "retailPrice": 0.002,
+          "unitOfMeasure": "10K",
+          "effectiveStartDate": "2024-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "53bf0a34-4913-5f53-bff6-52204f3ad04c"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 LRS",
+          "meterName": "E4 LRS Disk Operations",
+          "retailPrice": 0.002,
+          "unitOfMeasure": "10K",
+          "effectiveStartDate": "2018-11-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "ce957933-8287-4f8b-83ee-53a5cbe056d9"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 LRS",
+          "meterName": "E4 LRS Disk",
+          "retailPrice": 2.4,
+          "unitOfMeasure": "1/Month",
+          "effectiveStartDate": "2019-01-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "8c48b19a-c815-401e-b675-a94b6053b296"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 LRS",
+          "meterName": "E4 LRS Disk Mount",
+          "retailPrice": 0.26,
+          "unitOfMeasure": "1/Month",
+          "effectiveStartDate": "2021-07-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "cffb7e3e-d2ea-556e-84fc-c8f53c88cb00"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 ZRS",
+          "meterName": "E4 ZRS Disk",
+          "retailPrice": 3.6,
+          "unitOfMeasure": "1/Month",
+          "effectiveStartDate": "2022-03-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "d8edfdd2-4e7a-5ed5-aef7-eca189fa56e3"
+        },
+        {
+          "armRegionName": "eastus2",
+          "armSkuName": "",
+          "productName": "Standard SSD Managed Disks",
+          "skuName": "E4 ZRS",
+          "meterName": "E4 ZRS Disk Mount",
+          "retailPrice": 0.26,
+          "unitOfMeasure": "1/Month",
+          "effectiveStartDate": "2024-09-01T00:00:00Z",
+          "currencyCode": "USD",
+          "meterId": "eec13976-fbb3-5b74-baa9-d128d2b556c4"
+        }
+      ],
+      "pagination_complete": true
+    }
+  ]
+}
