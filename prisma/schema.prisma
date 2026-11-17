@@ -150,6 +150,9 @@ model Node {
   vmSize String?
   controlPort Int? @unique
   operationId String? @unique
+  activeIpRotationId String?
+  addressChanging Boolean @default(false)
+  ipRotations IpRotation[]
 }
 model ProvisionPlan {
   id String @id @default(uuid())
@@ -158,6 +161,33 @@ model ProvisionPlan {
   createdAt DateTime @default(now())
   expiresAt DateTime
   operation ProvisionOperation?
+  kind String @default("machine")
+  ipRotation IpRotation?
+}
+model IpRotation {
+  id String @id @default(uuid())
+  nodeId String
+  node Node @relation(fields:[nodeId],references:[id])
+  planId String @unique
+  plan ProvisionPlan @relation(fields:[planId],references:[id])
+  actorId String
+  idempotencyKey String
+  oldAddress String
+  newAddress String?
+  phase String @default("queued")
+  status String @default("running")
+  checkpoint Json @default("{}")
+  events Json @default("[]")
+  errorCode String?
+  leaseOwner String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  phaseStartedAt DateTime @default(now())
+  finishedAt DateTime?
+  @@unique([actorId,idempotencyKey])
+  @@index([status,leaseUntil])
+  @@index([nodeId,createdAt])
 }
 model ProvisionOperation {
   id String @id @default(uuid())

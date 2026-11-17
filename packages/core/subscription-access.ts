@@ -27,6 +27,7 @@ export async function sendConfig(sub: Subscription | null, res: Response) {
   const nodes = await db.node.findMany({
     where: {
       ready: true,
+      addressChanging: false,
       enabled: true,
       ...nodePoolWhere(sub),
       checkedAt: { gt: new Date(Date.now() - 120_000) },

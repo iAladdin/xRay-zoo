@@ -1,4 +1,5 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
+import type { Node } from "@prisma/client";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawn, execFile } from "node:child_process";
 import { createServer } from "node:net";
@@ -207,11 +208,14 @@ async function verify(op: MachineOperation) {
   const node = await db.node.findUniqueOrThrow({
     where: { operationId: op.id },
   });
+  return probeNode(node, op.id);
+}
+export async function probeNode(node: Node, probeId: string) {
   const observed = (await rows("/nodes", "nodes")).find(
     (x) => x.uuid === node.engineNodeId,
   );
   if (!observed?.isConnected || observed.isDisabled) return false;
-  const username = "xzp_" + op.id.replaceAll("-", "");
+  const username = "xzp_" + probeId.replaceAll("-", "");
   let client: ReturnType<typeof spawn> | undefined;
   try {
     await engine.ensureUser(username, {
@@ -229,7 +233,7 @@ async function verify(op: MachineOperation) {
     });
     const user = await engine.findUser(username);
     if (!user) throw new Error("ENGINE_PROBE_USER_MISSING");
-    const dir = root + "/.local/provisioning/" + op.id;
+    const dir = root + "/.local/provisioning/" + probeId;
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     const port = await freePort();
     let iface = process.env.PROBE_INTERFACE;

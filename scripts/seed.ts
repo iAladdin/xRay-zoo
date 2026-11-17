@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { db } from "../packages/core/db.js";
 import { root } from "../packages/core/config.js";
 import { NodeSchema } from "../packages/subscription/index.js";
@@ -19,10 +19,15 @@ await db.plan.upsert({
 });
 const catalog = await seedDefaultPlans();
 const inventory = JSON.parse(readFileSync(root + "/.local/nodes.json", "utf8"));
+const overridesPath = root + "/.local/ip-address-overrides.json";
+const addresses = existsSync(overridesPath)
+  ? JSON.parse(readFileSync(overridesPath, "utf8"))
+  : {};
 for (const input of inventory.nodes) {
   const node = NodeSchema.parse(input);
   const data = {
     ...node,
+    address: addresses[node.name]?.address ?? node.address,
     region: input.region,
     engineNodeId: input.engineNodeId,
     configProfileId: input.configProfileId,

@@ -31,7 +31,6 @@ def ensure_relay():
 def run_node(item):
     index, node, command = item
     control = str(LOCAL / f'tunnel-{node["code"]}.sock')
-    destination = 'xrayzoo@' + node['address']
     base = ['/usr/bin/ssh', '-S', control, '-i', str(LOCAL/'node_ssh'), '-o', 'UserKnownHostsFile='+str(LOCAL/'known_hosts'), '-o', 'StrictHostKeyChecking=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8']
     transport_file=LOCAL/'control-transport.json'
     if transport_file.exists():
@@ -40,9 +39,20 @@ def run_node(item):
         base += ['-o',f'ProxyCommand=/usr/bin/nc -X 5 -x 127.0.0.1:{port} %h %p']
     with open(LOCAL/f'tunnel-{node["code"]}.lock', 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        # Read overrides inside the lock, so a queued health check cannot resurrect an old IP.
+        overrides=LOCAL/'ip-address-overrides.json'
+        override=(json.loads(overrides.read_text()) if overrides.exists() else {}).get(node['name'])
+        address=override['address'] if override else node['address']
+        destination='xrayzoo@'+address
+        endpoint_file=LOCAL/f'tunnel-{node["code"]}.address'
+        previous=endpoint_file.read_text() if endpoint_file.exists() else (node['address'] if not override else None)
         check = subprocess.run(base+['-O','check',destination], capture_output=True, timeout=10)
         active = check.returncode == 0
         error = None
+        if active and previous!=address:
+            if command != 'status':
+                subprocess.run(base+['-O','exit',destination], capture_output=True, timeout=10)
+            active=False
         if command == 'stop' and active:
             subprocess.run(base+['-O','exit',destination], capture_output=True, timeout=10)
             active = False
@@ -59,6 +69,8 @@ def run_node(item):
                         error = 'SSH_AUTH_FAILED' if b'Permission denied' in errors.read() else 'SSH_UNREACHABLE'
             except subprocess.TimeoutExpired:
                 error = 'SSH_TIMEOUT'
+        if active:
+            endpoint_file.write_text(address);endpoint_file.chmod(0o600)
         return {'id':node['name'], 'connected':active, 'error':error}
 
 def main():

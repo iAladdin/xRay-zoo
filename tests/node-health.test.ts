@@ -13,6 +13,10 @@ const node = {
 test("readiness distinguishes stale observations, failed control transport, engine failure and operator disable", () => {
   assert.equal(healthState(node, now), "READY");
   assert.equal(
+    healthState({ ...node, addressChanging: true }, now),
+    "ROTATING_IP",
+  );
+  assert.equal(
     healthState(
       {
         ...node,

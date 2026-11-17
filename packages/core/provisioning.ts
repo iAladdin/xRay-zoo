@@ -133,7 +133,7 @@ export async function createMachine(
       return { id: duplicate.id };
     }
     const plan = await tx.provisionPlan.findUnique({ where: { id: planId } });
-    if (!plan || plan.actorId !== actorId)
+    if (!plan || plan.actorId !== actorId || plan.kind !== "machine")
       throw new HttpException("部署预览不存在", 404);
     if (plan.expiresAt <= new Date())
       throw new HttpException("预览已过期，请重新检查规格与费用", 409);

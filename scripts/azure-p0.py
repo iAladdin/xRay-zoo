@@ -34,11 +34,11 @@ class Azure:
         self.base = f'https://management.azure.com/subscriptions/{subscription}'
         self.token = az('account', 'get-access-token', '--resource', 'https://management.azure.com/', '-o', 'json')['accessToken']
 
-    def request(self, path, method='GET', body=None, allow404=False):
+    def request(self, path, method='GET', body=None, allow404=False, headers=None):
         url = path if path.startswith('https://') else self.base + path
         if urlparse(url).hostname != 'management.azure.com': raise ValueError('Unexpected ARM host')
         data = None if body is None else json.dumps(body).encode()
-        request = Request(url, data=data, method=method, headers={'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'})
+        request = Request(url, data=data, method=method, headers={'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json', **(headers or {})})
         for attempt in range(4):
             try:
                 with urlopen(request, timeout=90) as response:

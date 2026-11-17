@@ -27,10 +27,23 @@ export async function azure<T>(
   command: string,
   input: unknown = {},
 ): Promise<T> {
+  return runAzure<T>("azure-node.py", command, input);
+}
+export async function azureIp<T>(
+  command: string,
+  input: unknown = {},
+): Promise<T> {
+  return runAzure<T>("azure-ip.py", command, input);
+}
+async function runAzure<T>(
+  script: string,
+  command: string,
+  input: unknown,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const child = execFile(
       "python3",
-      [root + "/scripts/azure-node.py", command],
+      [root + "/scripts/" + script, command],
       { cwd: root, timeout: 240_000, maxBuffer: 12 * 1024 * 1024 },
       (error, stdout) => {
         try {
@@ -60,6 +73,20 @@ export async function azure<T>(
   });
 }
 export const provisionMessages: Record<string, string> = {
+  IP_RESOURCE_SCOPE_CONFLICT: "IP 资源不在项目配置的 Azure 作用域内",
+  IP_RESOURCE_OWNERSHIP_CONFLICT: "IP 或网络资源不属于该节点，已停止轮换",
+  IP_BINDING_CONFLICT: "Azure 网卡绑定已变化，已停止操作，请核对当前 IP",
+  IP_NETWORK_NOT_SUPPORTED:
+    "当前仅支持单网卡、单 IPv4、无独立 DNS 的 Standard 公网 IP 节点",
+  IP_VM_MISMATCH: "Azure VM 与网卡不匹配，已停止操作",
+  IP_PINNED_HOST_KEY_MISSING:
+    "缺少该节点已验证的 SSH 主机公钥，请先恢复控制连接",
+  IP_ALLOCATION_INVALID: "Azure 未分配有效的新公网 IP",
+  IP_ALLOCATION_NOT_READY: "新公网 IP 尚未就绪，可重试当前阶段",
+  IP_ALLOCATION_FAILED: "Azure 公网 IP 分配失败，可重试或回滚",
+  IP_STILL_ATTACHED: "待释放的 IP 仍被占用，保留资源并等待核对",
+  IP_ROTATION_TIMEOUT: "轮换阶段等待超时，可重试；发布前也可回滚原 IP",
+  IP_HOST_MISMATCH: "引擎节点地址与轮换记录不一致，已停止发布",
   AZURE_CONNECTION_OR_REQUEST_FAILED:
     "无法连接 Azure，请检查项目登录和管理出口后重试",
   AZURE_REQUEST_TIMEOUT: "Azure 请求超时，可重试；不会自动重复创建新资源",

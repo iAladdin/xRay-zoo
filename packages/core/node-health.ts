@@ -24,10 +24,12 @@ export function healthState(
     checkedAt: Date | null;
     healthReason: string;
     publishedAt?: Date | null;
+    addressChanging?: boolean;
   },
   now = Date.now(),
 ) {
   if (node.publishedAt === null) return "PROVISIONING";
+  if (node.addressChanging) return "ROTATING_IP";
   if (node.healthReason === "ENGINE_UNAVAILABLE") return "ENGINE_UNAVAILABLE";
   if (!node.enabled)
     return node.checkedAt &&
@@ -138,7 +140,7 @@ async function refresh(repair: boolean) {
       });
       if (reason === "READY" && node.publishedAt !== null)
         await tx.node.updateMany({
-          where: { id: node.id, enabled: true },
+          where: { id: node.id, enabled: true, addressChanging: false },
           data: { ready: true },
         });
     }
@@ -153,6 +155,7 @@ export async function nodeAction(
   const locked = await db.node.updateMany({
     where: {
       id,
+      activeIpRotationId: null,
       OR: [
         { controlLeaseUntil: null },
         { controlLeaseUntil: { lt: new Date() } },
@@ -229,6 +232,7 @@ export async function reconcileDisabledNodes() {
       enabled: false,
       engineDisabled: false,
       publishedAt: { not: null },
+      activeIpRotationId: null,
     },
   });
   for (const node of candidates) {
@@ -237,6 +241,7 @@ export async function reconcileDisabledNodes() {
       where: {
         id: node.id,
         enabled: false,
+        activeIpRotationId: null,
         OR: [
           { controlLeaseUntil: null },
           { controlLeaseUntil: { lt: new Date() } },

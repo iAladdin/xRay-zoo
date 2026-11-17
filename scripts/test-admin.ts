@@ -83,6 +83,10 @@ try {
     "/admin/machines",
     "/admin/machines/preview",
     `/admin/machines/${id}/retry`,
+    "/admin/nodes/xz-p0-jp/ip-rotation/preview",
+    "/admin/nodes/xz-p0-jp/ip-rotation",
+    `/admin/ip-rotations/${id}/retry`,
+    `/admin/ip-rotations/${id}/rollback`,
   ]) {
     await http(path, "", {}, 401);
     await http(path, customerCookie, {}, 403);
@@ -91,10 +95,26 @@ try {
     "/admin/azure/locations",
     "/admin/azure/skus?region=eastus2",
     `/admin/machines/${id}`,
+    `/admin/ip-rotations/${id}`,
   ]) {
     await http(path, "", undefined, 401);
     await http(path, customerCookie, undefined, 403);
   }
+  await http(
+    "/admin/nodes/xz-p0-jp/ip-rotation",
+    adminCookie,
+    { planId: id, idempotencyKey: randomUUID(), address: "untrusted" },
+    400,
+  );
+  await http(
+    "/admin/nodes/xz-p0-jp/ip-rotation",
+    adminCookie,
+    { planId: id, idempotencyKey: randomUUID() },
+    404,
+  );
+  await http(`/admin/ip-rotations/${id}`, adminCookie, undefined, 404);
+  await http(`/admin/ip-rotations/${id}/retry`, adminCookie, {}, 409);
+  await http(`/admin/ip-rotations/${id}/rollback`, adminCookie, {}, 409);
   await http(
     "/admin/machines",
     adminCookie,

@@ -19,6 +19,13 @@ import { db } from "../../../packages/core/db.js";
 import { currentUser } from "../../../packages/core/auth.js";
 import { azure, provisionError } from "../../../packages/core/azure.js";
 import {
+  previewRotation,
+  createRotation,
+  retryRotation,
+  rotationSelect,
+  rotationView,
+} from "../../../packages/core/ip-rotation.js";
+import {
   previewMachine,
   createMachine,
   retryMachine,
@@ -238,7 +245,16 @@ export class AdminApi {
     });
   }
   @Get("nodes") async nodes() {
-    const nodes = await db.node.findMany({ orderBy: { name: "asc" } });
+    const nodes = await db.node.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        ipRotations: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: rotationSelect,
+        },
+      },
+    });
     const order = ["JP", "SG", "US", "HK", "TW"];
     nodes.sort((a, b) => order.indexOf(a.country) - order.indexOf(b.country));
     return serial(
@@ -260,7 +276,11 @@ export class AdminApi {
         usageBytes: n.usageBytes,
         usageUpdatedAt: n.usageUpdatedAt,
         xrayVersion: n.xrayVersion,
-        busy: !!n.controlLeaseUntil && n.controlLeaseUntil > new Date(),
+        busy:
+          !!n.activeIpRotationId ||
+          (!!n.controlLeaseUntil && n.controlLeaseUntil > new Date()),
+        activeIpRotationId: n.activeIpRotationId,
+        ipRotation: n.ipRotations[0] ? rotationView(n.ipRotations[0]) : null,
         publishedAt: n.publishedAt,
         vmSize: n.vmSize,
         globalPool: n.globalPool,
@@ -270,6 +290,48 @@ export class AdminApi {
   @Post("nodes/refresh") async refresh() {
     await refreshNodeHealth(true);
     return { ok: true };
+  }
+  @Post("nodes/:id/ip-rotation/preview") async rotationPreview(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+  ) {
+    try {
+      return await previewRotation(req.adminId, id);
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
+      throw new HttpException(provisionError(e).message, 409);
+    }
+  }
+  @Post("nodes/:id/ip-rotation") rotateIp(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const v = z
+      .object({ planId: z.string().uuid(), idempotencyKey: z.string().uuid() })
+      .strict()
+      .parse(body);
+    return createRotation(req.adminId, id, v.planId, v.idempotencyKey);
+  }
+  @Get("ip-rotations/:id") async rotation(@Param("id") id: string) {
+    const op = await db.ipRotation.findUnique({
+      where: { id: z.string().uuid().parse(id) },
+      select: rotationSelect,
+    });
+    if (!op) throw new HttpException("轮换任务不存在", 404);
+    return rotationView(op);
+  }
+  @Post("ip-rotations/:id/retry") retryRotation(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+  ) {
+    return retryRotation(req.adminId, z.string().uuid().parse(id));
+  }
+  @Post("ip-rotations/:id/rollback") rollbackRotation(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+  ) {
+    return retryRotation(req.adminId, z.string().uuid().parse(id), true);
   }
   @Post("nodes/:id/action") async node(
     @Req() req: AdminRequest,

@@ -5,6 +5,7 @@ import { settings, assertLocalRuntime } from "../../../packages/core/config.js";
 import { processPayment } from "../../../packages/core/billing.js";
 import { syncEntitlement } from "../../../packages/core/entitlements.js";
 import { advanceMachine } from "../../../packages/core/provisioning.js";
+import { advanceRotation } from "../../../packages/core/ip-rotation.js";
 import {
   refreshNodeHealth,
   reconcileDisabledNodes,
@@ -17,7 +18,10 @@ const queue = new Queue("xray-zoo", { connection });
 const machineQueue = new Queue("xray-zoo-machines", { connection });
 const machineWorker = new Worker(
   "xray-zoo-machines",
-  async (job) => advanceMachine(job.data.id),
+  async (job) =>
+    job.name === "rotate-ip"
+      ? advanceRotation(job.data.id)
+      : advanceMachine(job.data.id),
   { connection, concurrency: 1 },
 );
 machineWorker.on("failed", () =>
@@ -44,6 +48,25 @@ async function reconcile() {
   if (running) return;
   running = true;
   try {
+    const rotations = await db.ipRotation.findMany({
+      where: {
+        status: "running",
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+      take: 50,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const op of rotations)
+      await machineQueue.add(
+        "rotate-ip",
+        { id: op.id },
+        {
+          jobId: `ip-${op.id}-${Math.floor(Date.now() / 5000)}`,
+          removeOnComplete: 50,
+          removeOnFail: 50,
+        },
+      );
     const machines = await db.provisionOperation.findMany({
       where: {
         status: "running",

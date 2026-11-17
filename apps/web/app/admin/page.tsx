@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import "./admin.css";
 import MachineProvisioner from "./MachineProvisioner";
+import IpRotationDialog, { type IpRotation } from "./IpRotationDialog";
 const API = "http://localhost:3101";
 const tabs = [
   ["overview", "运营概览", "◫"],
@@ -42,6 +43,8 @@ type NodeRow = {
   busy: boolean;
   publishedAt: string | null;
   vmSize: string | null;
+  activeIpRotationId: string | null;
+  ipRotation: IpRotation | null;
 };
 type Sub = {
   id: string;
@@ -117,6 +120,7 @@ const countries: Record<string, string> = {
   TW: "台湾",
 };
 const labels: Record<string, string> = {
+  ROTATING_IP: "IP 切换中",
   PROVISIONING: "部署验证中",
   READY: "控制就绪",
   DISABLED: "已停用",
@@ -155,6 +159,11 @@ const actionLabel: Record<string, string> = {
   "rotate-link": "重置订阅链接",
 };
 const auditLabels: Record<string, string> = {
+  "ip-rotation.create": "提交 IP 轮换",
+  "ip-rotation.retry": "重试 IP 轮换",
+  "ip-rotation.rollback": "请求回滚 IP",
+  "ip-rotation.published": "发布新 IP",
+  "ip-rotation.restored": "恢复原 IP",
   "subscription.customer-revoke": "用户撤销访问",
   "subscription.customer-regenerate": "用户重新生成配置",
   "subscription.suspend": "暂停订阅",
@@ -350,6 +359,7 @@ export default function Admin() {
     version?: number;
   } | null>(null);
   const [editing, setEditing] = useState<Plan | "new" | null>(null);
+  const [rotating, setRotating] = useState<NodeRow | null>(null);
   const requestId = useRef(0);
   function fail(e: unknown) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -837,6 +847,13 @@ export default function Admin() {
                         · 引擎：{n.engineConnected ? "已连接" : "未连接"}
                       </small>
                       <small>最后就绪：{date(n.lastHealthyAt)}</small>
+                      {n.ipRotation && (
+                        <small>
+                          IP 轮换：
+                          {n.ipRotation.status === "failed" ? "暂停 · " : ""}
+                          {n.ipRotation.phaseLabel}
+                        </small>
+                      )}
                     </td>
                     <td>
                       {date(n.checkedAt)}
@@ -846,6 +863,16 @@ export default function Admin() {
                     </td>
                     <td>
                       <div className="az-row-actions">
+                        <button
+                          disabled={
+                            busy ||
+                            !n.publishedAt ||
+                            (!n.activeIpRotationId && (n.busy || !n.enabled))
+                          }
+                          onClick={() => setRotating(n)}
+                        >
+                          {n.activeIpRotationId ? "查看 IP 轮换" : "轮换 IP"}
+                        </button>
                         {[
                           n.enabled ? "disable" : "enable",
                           "reconnect",
@@ -1208,6 +1235,15 @@ export default function Admin() {
             </div>
           </form>
         </Dialog>
+      )}
+      {rotating && (
+        <IpRotationDialog
+          node={rotating}
+          onClose={() => {
+            setRotating(null);
+            load();
+          }}
+        />
       )}
       {editing && (
         <Dialog

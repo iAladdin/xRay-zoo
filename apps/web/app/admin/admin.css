@@ -985,6 +985,24 @@
   font-size: 12px;
   color: #406b3e;
 }
+.az-ip-events {
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 18px;
+  padding: 0 12px;
+  background: #f6f8f3;
+  border-radius: 7px;
+}
+.az-ip-events p {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.az-ip-events time {
+  color: #75837d;
+  flex-shrink: 0;
+}
 .az-machine-dialog {
   width: min(800px, calc(100vw - 32px));
 }
