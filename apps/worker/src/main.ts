@@ -6,6 +6,7 @@ import { processPayment } from "../../../packages/core/billing.js";
 import { syncEntitlement } from "../../../packages/core/entitlements.js";
 import { advanceMachine } from "../../../packages/core/provisioning.js";
 import { advanceRotation } from "../../../packages/core/ip-rotation.js";
+import { advanceMaintenance } from "../../../packages/core/node-maintenance.js";
 import {
   refreshNodeHealth,
   reconcileDisabledNodes,
@@ -21,7 +22,9 @@ const machineWorker = new Worker(
   async (job) =>
     job.name === "rotate-ip"
       ? advanceRotation(job.data.id)
-      : advanceMachine(job.data.id),
+      : job.name === "maintenance"
+        ? advanceMaintenance(job.data.id)
+        : advanceMachine(job.data.id),
   { connection, concurrency: 1 },
 );
 machineWorker.on("failed", () =>
@@ -48,6 +51,25 @@ async function reconcile() {
   if (running) return;
   running = true;
   try {
+    const batches = await db.nodeMaintenanceBatch.findMany({
+      where: {
+        status: "running",
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+      take: 50,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const batch of batches)
+      await machineQueue.add(
+        "maintenance",
+        { id: batch.id },
+        {
+          jobId: `maintenance-${batch.id}-${Math.floor(Date.now() / 5000)}`,
+          removeOnComplete: 50,
+          removeOnFail: 50,
+        },
+      );
     const rotations = await db.ipRotation.findMany({
       where: {
         status: "running",

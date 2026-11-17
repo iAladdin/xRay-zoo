@@ -19,6 +19,10 @@ import { db } from "../../../packages/core/db.js";
 import { currentUser } from "../../../packages/core/auth.js";
 import { azure, provisionError } from "../../../packages/core/azure.js";
 import {
+  createMaintenance,
+  maintenanceView,
+} from "../../../packages/core/node-maintenance.js";
+import {
   previewRotation,
   createRotation,
   retryRotation,
@@ -290,6 +294,35 @@ export class AdminApi {
   @Post("nodes/refresh") async refresh() {
     await refreshNodeHealth(true);
     return { ok: true };
+  }
+  @Post("node-maintenance") maintenance(
+    @Req() req: AdminRequest,
+    @Body() body: unknown,
+  ) {
+    return createMaintenance(req.adminId, body);
+  }
+  @Get("node-maintenance") async maintenanceList() {
+    const [running, recent] = await Promise.all([
+      db.nodeMaintenanceBatch.findMany({
+        where: { status: "running" },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.nodeMaintenanceBatch.findMany({
+        where: { status: "complete" },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+    ]);
+    return [...running, ...recent].map(maintenanceView);
+  }
+  @Get("node-maintenance/:id") async maintenanceDetail(
+    @Param("id") id: string,
+  ) {
+    const batch = await db.nodeMaintenanceBatch.findUnique({
+      where: { id: z.string().uuid().parse(id) },
+    });
+    if (!batch) throw new HttpException("批量维护任务不存在", 404);
+    return maintenanceView(batch);
   }
   @Post("nodes/:id/ip-rotation/preview") async rotationPreview(
     @Req() req: AdminRequest,

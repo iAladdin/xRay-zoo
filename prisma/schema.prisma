@@ -226,6 +226,22 @@ model ProvisionEvent {
   createdAt DateTime @default(now())
   @@index([operationId,createdAt])
 }
+model NodeMaintenanceBatch {
+  id String @id @default(uuid())
+  actorId String
+  idempotencyKey String
+  requestHash String
+  action String
+  items Json
+  status String @default("running")
+  leaseOwner String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  finishedAt DateTime?
+  @@unique([actorId,idempotencyKey])
+  @@index([status,leaseUntil])
+}
 model AuditLog {
   id String @id @default(uuid())
   actorId String

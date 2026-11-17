@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import "./admin.css";
 import MachineProvisioner from "./MachineProvisioner";
 import IpRotationDialog, { type IpRotation } from "./IpRotationDialog";
+import NodeMaintenance from "./NodeMaintenance";
 const API = "http://localhost:3101";
 const tabs = [
   ["overview", "运营概览", "◫"],
@@ -159,6 +160,7 @@ const actionLabel: Record<string, string> = {
   "rotate-link": "重置订阅链接",
 };
 const auditLabels: Record<string, string> = {
+  "node.batch.requested": "提交批量节点维护",
   "ip-rotation.create": "提交 IP 轮换",
   "ip-rotation.retry": "重试 IP 轮换",
   "ip-rotation.rollback": "请求回滚 IP",
@@ -360,6 +362,7 @@ export default function Admin() {
   } | null>(null);
   const [editing, setEditing] = useState<Plan | "new" | null>(null);
   const [rotating, setRotating] = useState<NodeRow | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const requestId = useRef(0);
   function fail(e: unknown) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -389,6 +392,9 @@ export default function Admin() {
       if (rid !== requestId.current) return;
       setOverview(stats);
       setNodes(ns);
+      setSelectedNodes((ids) =>
+        ids.filter((id) => ns.some((n: NodeRow) => n.id === id)),
+      );
       if (tab === "plans") setPlans(detail);
       else if (detail) setList(detail);
       setError("");
@@ -820,12 +826,48 @@ export default function Admin() {
                   停用会阻止该节点继续提供服务，不会释放 Azure 资源。
                 </small>
               </div>
+              <NodeMaintenance
+                nodes={nodes}
+                selected={selectedNodes}
+                onSelect={setSelectedNodes}
+                onRefresh={() => load()}
+                onRotation={(nodeId, rotationId) => {
+                  const node = nodes.find((n) => n.id === nodeId);
+                  if (node)
+                    setRotating({
+                      ...node,
+                      activeIpRotationId: rotationId,
+                      ipRotation: null,
+                    });
+                }}
+              />
               <Table
-                headers={["节点 / 公网地址", "控制状态", "最近检测", "操作"]}
+                headers={[
+                  "选择",
+                  "节点 / 公网地址",
+                  "控制状态",
+                  "最近检测",
+                  "操作",
+                ]}
                 empty={!nodes.length}
               >
                 {nodes.map((n) => (
                   <tr key={n.id}>
+                    <td className="az-node-select">
+                      <input
+                        type="checkbox"
+                        aria-label={"选择节点 " + n.name}
+                        disabled={busy || n.busy || !n.publishedAt}
+                        checked={selectedNodes.includes(n.id)}
+                        onChange={(e) =>
+                          setSelectedNodes((ids) =>
+                            e.target.checked
+                              ? [...ids.filter((id) => id !== n.id), n.id]
+                              : ids.filter((id) => id !== n.id),
+                          )
+                        }
+                      />
+                    </td>
                     <td>
                       <strong>{n.name}</strong>
                       <small>
