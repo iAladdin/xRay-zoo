@@ -1,0 +1,78 @@
+name: xray-zoo-p0
+services:
+  postgres:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: xrayzoo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/local-env.py first}
+      POSTGRES_DB: xrayzoo
+    ports: ['127.0.0.1:15432:5432']
+    volumes: ['app-db:/var/lib/postgresql']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U xrayzoo -d xrayzoo']
+      interval: 3s
+      retries: 20
+  redis:
+    image: redis:8.2.2-alpine
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports: ['127.0.0.1:16379:6379']
+    volumes: ['app-redis:/data']
+  engine-db:
+    image: postgres:18.4
+    environment:
+      POSTGRES_USER: remnawave
+      POSTGRES_PASSWORD: ${ENGINE_DB_PASSWORD:?run scripts/local-env.py first}
+      POSTGRES_DB: remnawave
+    volumes: ['engine-db:/var/lib/postgresql']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U remnawave -d remnawave']
+      interval: 3s
+      retries: 20
+  engine-redis:
+    image: valkey/valkey:9-alpine
+    command: ['valkey-server', '--save', '', '--appendonly', 'no', '--maxmemory-policy', 'noeviction']
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 3s
+      retries: 20
+  engine:
+    image: remnawave/backend:3.4.11
+    extra_hosts:
+      - 'jp.xray-zoo.control:${P0_HOST_GATEWAY:-host-gateway}'
+      - 'sg.xray-zoo.control:${P0_HOST_GATEWAY:-host-gateway}'
+      - 'us.xray-zoo.control:${P0_HOST_GATEWAY:-host-gateway}'
+      - 'hk.xray-zoo.control:${P0_HOST_GATEWAY:-host-gateway}'
+      - 'tw.xray-zoo.control:${P0_HOST_GATEWAY:-host-gateway}'
+    environment:
+      APP_PORT: '3000'
+      METRICS_PORT: '3001'
+      API_INSTANCES: '1'
+      DATABASE_URL: postgresql://remnawave:${ENGINE_DB_PASSWORD}@engine-db:5432/remnawave
+      REDIS_HOST: engine-redis
+      REDIS_PORT: '6379'
+      APP_SECRET: ${ENGINE_APP_SECRET}
+      METRICS_USER: operator
+      METRICS_PASS: ${ENGINE_METRICS_PASSWORD}
+      WEBHOOK_SECRET_HEADER: ${ENGINE_WEBHOOK_SECRET}
+      WEBHOOK_ENABLED: 'false'
+      IS_TELEGRAM_NOTIFICATIONS_ENABLED: 'false'
+      PANEL_DOMAIN: localhost
+      FRONT_END_DOMAIN: http://localhost:3100
+      SUB_PUBLIC_DOMAIN: localhost:3101/s
+    ports: ['127.0.0.1:3300:3000', '127.0.0.1:3301:3001']
+    depends_on:
+      engine-db: { condition: service_healthy }
+      engine-redis: { condition: service_healthy }
+    restart: unless-stopped
+  engine-node:
+    image: remnawave/node:3.4.6
+    profiles: ['node']
+    environment:
+      NODE_PORT: '2222'
+      SECRET_KEY: ${ENGINE_NODE_SECRET:-unconfigured}
+    ports: ['127.0.0.1:3222:2222', '127.0.0.1:3443:443']
+    restart: unless-stopped
+volumes:
+  app-db:
+  app-redis:
+  engine-db:

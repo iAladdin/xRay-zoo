@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  passwordHash String
+  role String @default("CUSTOMER")
+  createdAt DateTime @default(now())
+  sessions Session[]
+  orders Order[]
+  subscription Subscription?
+}
+model Session {
+  id String @id @default(uuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+model Plan {
+  id String @id
+  name String
+  amountMinor Int
+  currency String
+  quotaBytes BigInt
+  regions String[]
+  active Boolean @default(true)
+  orders Order[]
+}
+model Order {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  planId String
+  plan Plan @relation(fields: [planId], references: [id])
+  provider String
+  status String @default("pending")
+  idempotencyKey String
+  amountMinor Int
+  currency String
+  quotaBytes BigInt
+  regions String[]
+  checkoutId String? @unique
+  checkoutUrl String?
+  providerSubscriptionId String?
+  createdAt DateTime @default(now())
+  periods ServicePeriod[]
+  @@unique([userId, idempotencyKey])
+}
+model ProviderEvent {
+  id String @id @default(uuid())
+  provider String
+  eventId String
+  kind String
+  payload Json
+  status String @default("pending")
+  lastError String?
+  createdAt DateTime @default(now())
+  @@unique([provider, eventId])
+}
+model Subscription {
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id])
+  status String @default("pending")
+  desiredVersion Int @default(0)
+  appliedVersion Int @default(0)
+  engineUserId String? @unique
+  accessUuidCipher String?
+  tokenHash String? @unique
+  tokenCipher String?
+  validUntil DateTime?
+  quotaBytes BigInt @default(0)
+  usedBytes BigInt @default(0)
+  meterBaseline BigInt @default(0)
+  regions String[]
+  lastUsageAt DateTime?
+  lastError String?
+  currentPeriodId String?
+  syncLeaseOwner String?
+  syncLeaseUntil DateTime?
+  createdAt DateTime @default(now())
+  periods ServicePeriod[]
+}
+model ServicePeriod {
+  id String @id @default(uuid())
+  subscriptionId String
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  orderId String
+  order Order @relation(fields: [orderId], references: [id])
+  provider String
+  invoiceId String
+  startAt DateTime
+  endAt DateTime
+  quotaBytes BigInt
+  status String @default("paid")
+  createdAt DateTime @default(now())
+  @@unique([provider, invoiceId])
+}
+model Outbox {
+  id String @id @default(uuid())
+  kind String
+  aggregateId String
+  version Int
+  deliveredAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([kind, aggregateId, version])
+  @@index([deliveredAt])
+}
+model Node {
+  id String @id
+  name String @unique
+  region String
+  country String
+  address String
+  port Int @default(443)
+  publicKey String
+  shortId String
+  serverName String
+  engineNodeId String?
+  configProfileId String?
+  inboundId String?
+  squadId String?
+  ready Boolean @default(false)
+  checkedAt DateTime?
+}

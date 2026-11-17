@@ -1,0 +1,13 @@
+#cloud-config
+# No cloud credentials, panel tokens, user UUIDs, or private keys are in customData.
+package_update: true
+packages:
+  - docker.io
+  - ca-certificates
+  - curl
+  - jq
+runcmd:
+  - [systemctl, enable, --now, docker]
+  - [install, -d, -m, '0700', /opt/xray-zoo]
+  - [sh, -c, 'printf ready > /opt/xray-zoo/bootstrap-ready']
+final_message: 'xRay-zoo base bootstrap finished'

@@ -2,7 +2,12 @@
 
 面向自营订阅业务的 Xray 集群控制台。管理员连接 Azure、选择地区并创建节点，用户购买套餐后获得可导入 Mihomo / Clash Meta 客户端的订阅链接。
 
-**当前阶段：仓库初始化与设计。** 已完成方案调研、领域词汇、架构、RBAC、支付与订阅流程、Azure 编排方案和示例配置；应用、自动开机、真实收款与节点部署尚未实现。
+**当前阶段：P0 节点验证与本地最小购买闭环。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
+
+- [实际验证结果与限制](docs/10-p0-results.md)
+- [本地运行、Azure 部署与恢复](docs/11-local-runbook.md)
+- 网页：`http://localhost:3100`；API：`http://localhost:3101`。
+- 私有节点状态、Azure/Stripe 凭证和导出访问身份均在被 Git 忽略的 `.local/`；不得提交。
 
 ## 首版目标
 
@@ -25,7 +30,7 @@
 | 配置 | 首版明确支持 Mihomo 的 VLESS + REALITY；不承诺旧版 Clash 兼容 |
 | 初期部署 | 独立控制服务器的 Docker Compose，地区节点使用 Azure Linux VM |
 
-以上是设计选择，不代表依赖已安装或集成已验证。支付渠道正式启用取决于运营主体、结算地区和账户可用性。
+表格是目标架构。当前网页使用 Next.js 与普通 CSS，P0 登录使用仅限本机的邮箱/密码；Azure 通过隔离的 CLI 登录和 ARM REST 编排。OIDC/MFA、完整 RBAC、网页配置 Azure 凭证和 Customer Portal 属于后续阶段。
 
 ## 文档导航
 

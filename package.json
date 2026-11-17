@@ -1,0 +1,61 @@
+{
+  "name": "xray-zoo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "tsx watch apps/api/src/main.ts",
+    "dev:web": "next dev apps/web -p 3100 -H 127.0.0.1",
+    "dev:worker": "tsx watch apps/worker/src/main.ts",
+    "build:api": "tsc --noEmit",
+    "build:web": "next build apps/web",
+    "db:generate": "prisma generate",
+    "db:migrate": "node --env-file=.local/app.env node_modules/prisma/build/index.js migrate deploy",
+    "db:seed": "tsx scripts/seed.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "test:integration": "tsx scripts/integration.ts",
+    "subscription:render": "tsx scripts/render-subscription.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.5.1",
+    "@nestjs/core": "12.5.1",
+    "@nestjs/platform-express": "12.5.1",
+    "@prisma/client": "6.19.0",
+    "bullmq": "6.7.7",
+    "cookie-parser": "1.4.7",
+    "dotenv": "17.2.3",
+    "ioredis": "6.0.0",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "stripe": "23.1.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "1.4.9",
+    "@types/express": "5.0.5",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.6",
+    "@types/react-dom": "19.2.3",
+    "prettier": "3.6.2",
+    "prisma": "6.19.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp"
+    ]
+  }
+}

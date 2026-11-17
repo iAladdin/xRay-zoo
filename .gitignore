@@ -26,3 +26,12 @@ coverage/
 .tmp/
 .DS_Store
 .idea/
+
+# Local credentials and P0 state
+.local/
+work/
+
+__pycache__/
+*.pyc
+
+*.tsbuildinfo

@@ -1,0 +1,101 @@
+{
+  "mixed-port": 7890,
+  "allow-lan": false,
+  "mode": "rule",
+  "log-level": "info",
+  "ipv6": false,
+  "unified-delay": true,
+  "tcp-concurrent": true,
+  "profile": {
+    "store-selected": true,
+    "store-fake-ip": true
+  },
+  "dns": {
+    "enable": true,
+    "ipv6": false,
+    "use-hosts": true,
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "default-nameserver": ["223.5.5.5", "119.29.29.29"],
+    "nameserver": [
+      "https://doh.pub/dns-query",
+      "https://dns.alidns.com/dns-query"
+    ],
+    "proxy-server-nameserver": ["https://doh.pub/dns-query"],
+    "nameserver-policy": {
+      "geosite:cn": [
+        "https://doh.pub/dns-query",
+        "https://dns.alidns.com/dns-query"
+      ],
+      "geosite:geolocation-!cn": [
+        "https://1.1.1.1/dns-query",
+        "https://8.8.8.8/dns-query"
+      ]
+    },
+    "fake-ip-filter": [
+      "*.lan",
+      "*.local",
+      "*.localdomain",
+      "localhost.ptlogin2.qq.com",
+      "+.msftconnecttest.com",
+      "+.msftncsi.com",
+      "time.*.com",
+      "ntp.*.com",
+      "*.time.edu.cn",
+      "+.pool.ntp.org",
+      "stun.*.*"
+    ]
+  },
+  "rules": [
+    "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+    "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
+    "IP-CIDR6,::1/128,DIRECT,no-resolve",
+    "IP-CIDR6,fc00::/7,DIRECT,no-resolve",
+    "IP-CIDR6,fe80::/10,DIRECT,no-resolve",
+    "DOMAIN-SUFFIX,openai.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,chatgpt.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,oaistatic.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,oaiusercontent.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,sora.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,anthropic.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,claude.ai,🤖 AI 服务",
+    "DOMAIN,gemini.google.com,🤖 AI 服务",
+    "DOMAIN,aistudio.google.com,🤖 AI 服务",
+    "DOMAIN,bard.google.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,perplexity.ai,🤖 AI 服务",
+    "DOMAIN-SUFFIX,poe.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,midjourney.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,openrouter.ai,🤖 AI 服务",
+    "DOMAIN-SUFFIX,huggingface.co,🤖 AI 服务",
+    "DOMAIN-SUFFIX,mistral.ai,🤖 AI 服务",
+    "DOMAIN-SUFFIX,cohere.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,cursor.com,🤖 AI 服务",
+    "DOMAIN-SUFFIX,x.ai,🤖 AI 服务",
+    "DOMAIN-SUFFIX,grok.com,🤖 AI 服务",
+    "GEOSITE,category-ai-!cn,🤖 AI 服务",
+    "GEOSITE,openai,🤖 AI 服务",
+    "GEOSITE,anthropic,🤖 AI 服务",
+    "GEOSITE,perplexity,🤖 AI 服务",
+    "GEOSITE,google-gemini,🤖 AI 服务",
+    "GEOSITE,youtube,📺 YouTube",
+    "GEOSITE,google,🔍 Google",
+    "GEOSITE,netflix,🎬 流媒体",
+    "GEOSITE,disney,🎬 流媒体",
+    "GEOSITE,hbo,🎬 流媒体",
+    "GEOSITE,hulu,🎬 流媒体",
+    "GEOSITE,primevideo,🎬 流媒体",
+    "GEOSITE,spotify,🎵 Spotify",
+    "GEOSITE,github,🐙 GitHub",
+    "GEOSITE,apple,🍎 Apple",
+    "GEOSITE,microsoft,🪟 Microsoft",
+    "GEOSITE,telegram,✈️ Telegram",
+    "GEOSITE,steam,🎮 游戏平台",
+    "GEOSITE,category-games,🎮 游戏平台",
+    "GEOSITE,cn,DIRECT",
+    "GEOIP,CN,DIRECT",
+    "MATCH,🐟 漏网之鱼"
+  ]
+}

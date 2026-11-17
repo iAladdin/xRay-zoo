@@ -1,4 +1,4 @@
-# Design template only; placeholders require a renderer that is not implemented.
+# Minimal illustrative template; production of tc split YAML uses packages/subscription.
 # References: https://wiki.metacubex.one/en/config/proxies/vless/
 mixed-port: 7890
 allow-lan: false
@@ -23,6 +23,7 @@ proxies:
     reality-opts:
       public-key: '${REALITY_PUBLIC_KEY}'
       short-id: '${REALITY_SHORT_ID}'
+      support-x25519mlkem768: true
 
 proxy-groups:
   - name: 'AUTO'
