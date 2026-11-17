@@ -1,11 +1,11 @@
 # 配置示例
 
-这些是设计阶段的输入/输出形状，不是能直接运行的部署包。仓库还没有蓝图执行器、Bicep 模块或订阅渲染程序。
+这些文件展示设计阶段的输入/输出形状，不是能直接运行的部署包。当前 P0 部署与订阅渲染已在 `scripts/`、`infra/` 和 `packages/subscription/` 实现，实际运行命令见 [运行手册](../docs/11-local-runbook.md)。
 
 | 文件 | 用途 | 秘密边界 |
 | --- | --- | --- |
 | [cluster.blueprint.example.json](cluster.blueprint.example.json) | 指定地区、规格、资源组和节点数 | 只引用 cloudConnectionRef，不含 Azure 凭证 |
-| [plan.example.json](plan.example.json) | 套餐版本、计量单位和周期规则 | 示例价格不代表正式售价 |
+| [plan.example.json](plan.example.json) | 50 GB 默认套餐的版本、计量单位和周期规则 | 当前为测试环境默认价，完整计价假设见成本文档 |
 | [mihomo.template.yaml](mihomo.template.yaml) | 完整客户端 YAML 输出结构 | 渲染后含用户接入身份，仅提供给订阅本人 |
 
 ## 蓝图导出

@@ -168,7 +168,10 @@ class Api {
     };
   }
   @Get("plans") async plans() {
-    const plans = await db.plan.findMany({ where: { active: true } });
+    const plans = await db.plan.findMany({
+      where: { active: true },
+      orderBy: [{ quotaBytes: "asc" }, { amountMinor: "asc" }, { id: "asc" }],
+    });
     return {
       provider: settings.paymentProvider,
       plans: plans.map((p) => ({ ...p, quotaBytes: String(p.quotaBytes) })),

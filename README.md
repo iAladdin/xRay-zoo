@@ -5,6 +5,7 @@
 **当前阶段：P0 节点验证、本地购买闭环、用户中心与管理员后台。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
 
 - [普通用户中心与访问撤销](docs/13-customer-account.md)
+- 默认月套餐：50 / 150 / 300 GB，按足额 Azure 亚洲出网成本 × 10 为 US$60 / US$180 / US$360；[计价假设与市场对照](docs/09-unit-economics.md)。
 - [管理员后台与节点状态说明](docs/12-admin-console.md)
 - [实际验证结果与限制](docs/10-p0-results.md)
 - [本地运行、Azure 部署与恢复](docs/11-local-runbook.md)

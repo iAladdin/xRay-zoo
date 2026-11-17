@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "node --env-file=.local/app.env node_modules/prisma/build/index.js migrate deploy",
     "db:seed": "tsx scripts/seed.ts",
+    "plans:seed": "tsx scripts/seed-plans.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:integration": "tsx scripts/integration.ts",
     "subscription:render": "tsx scripts/render-subscription.ts",

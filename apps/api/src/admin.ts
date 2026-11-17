@@ -237,7 +237,7 @@ export class AdminApi {
   @Get("plans") async plans() {
     return serial(
       await db.plan.findMany({
-        orderBy: { id: "asc" },
+        orderBy: [{ active: "desc" }, { quotaBytes: "asc" }, { id: "asc" }],
         include: { _count: { select: { orders: true } } },
       }),
     );

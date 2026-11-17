@@ -50,6 +50,8 @@ pnpm db:seed
 
 ## 启动网页闭环
 
+更新默认月套餐可单独运行 `pnpm plans:seed`，不会修改节点或旧订单。当前新增 50 / 150 / 300 GB 三档、下架旧 20 GB 测试套餐；默认价格和假设见 [成本与定价](09-unit-economics.md)。已有安装不需要重新执行整个节点 seed。
+
 ```sh
 python3 scripts/local-runtime.py start
 python3 scripts/local-runtime.py status

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { db } from "../packages/core/db.js";
 import { root } from "../packages/core/config.js";
 import { NodeSchema } from "../packages/subscription/index.js";
+import { seedDefaultPlans } from "../packages/core/default-plans.js";
 await db.plan.upsert({
   where: { id: "p0-20gb" },
   create: {
@@ -11,9 +12,11 @@ await db.plan.upsert({
     currency: "usd",
     quotaBytes: 20_000_000_000n,
     regions: ["JP", "SG", "US", "HK", "TW"],
+    active: false,
   },
   update: {},
 });
+const catalog = await seedDefaultPlans();
 const inventory = JSON.parse(readFileSync(root + "/.local/nodes.json", "utf8"));
 for (const input of inventory.nodes) {
   const node = NodeSchema.parse(input);
@@ -28,5 +31,7 @@ for (const input of inventory.nodes) {
   };
   await db.node.upsert({ where: { id: node.id }, create: data, update: data });
 }
-console.log(`Seeded 1 test plan and ${inventory.nodes.length} nodes`);
+console.log(
+  `Initialized default plan catalog (${catalog.created} created) and ${inventory.nodes.length} nodes`,
+);
 await db.$disconnect();

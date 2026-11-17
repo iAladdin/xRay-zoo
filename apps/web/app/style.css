@@ -427,8 +427,8 @@ form > button {
 }
 .plan-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
   margin-bottom: 80px;
 }
 .plan {
@@ -468,8 +468,9 @@ form > button {
   width: 100%;
 }
 .plan-grid aside {
+  grid-column: 1 / -1;
   padding: 25px 12px;
-  max-width: 420px;
+  max-width: 780px;
 }
 .plan-grid aside h3 {
   font-weight: 500;

@@ -362,9 +362,9 @@ export default function Home() {
         <div className="section-title">
           <div>
             <div className="eyebrow">SIMPLE PLAN</div>
-            <h2>五个区域，一个套餐。</h2>
+            <h2>五个区域，按需选择流量。</h2>
           </div>
-          <p>当前价格用于测试验证</p>
+          <p>50 / 150 / 300 GB · 每月共享流量</p>
         </div>
         <div className="plan-grid">
           {plans.map((plan) => (
