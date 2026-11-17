@@ -2,6 +2,7 @@ import { HttpException } from "@nestjs/common";
 import type { Subscription } from "@prisma/client";
 import type { Response } from "express";
 import { db } from "./db.js";
+import { settings } from "./config.js";
 import { hashToken, randomToken, seal, unseal } from "./crypto.js";
 import { nodePoolWhere } from "./node-pool.js";
 import {
@@ -44,8 +45,11 @@ export async function sendConfig(sub: Subscription | null, res: Response) {
       "Cache-Control": "private, no-store",
       "Content-Type": "text/yaml; charset=utf-8",
       "Content-Disposition": 'attachment; filename="xray-zoo.yaml"',
+      // The engine provides a combined counter, not separate upload/download meters.
+      // Clients calculate used traffic as upload + download; do not count it twice.
       "subscription-userinfo": `upload=0; download=${sub.usedBytes}; total=${sub.quotaBytes}; expire=${Math.floor(sub.validUntil!.getTime() / 1000)}`,
       "profile-update-interval": "1",
+      "profile-web-page-url": new URL("/account", settings.webOrigin).href,
     })
     .send(yaml);
 }

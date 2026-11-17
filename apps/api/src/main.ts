@@ -321,7 +321,16 @@ const app = await NestFactory.create(AppModule, {
   logger: ["error", "warn"],
 });
 app.use(cookieParser());
-app.enableCors({ origin: settings.webOrigin, credentials: true });
+app.enableCors({
+  origin: settings.webOrigin,
+  credentials: true,
+  exposedHeaders: [
+    "subscription-userinfo",
+    "profile-update-interval",
+    "profile-web-page-url",
+    "content-disposition",
+  ],
+});
 // Exact browser Origin and loopback binding confine dev payment/auth to this machine.
 const attempts = new Map<string, { count: number; until: number }>();
 app.use((req: Request, res: Response, next: () => void) => {

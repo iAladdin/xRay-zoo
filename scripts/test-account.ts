@@ -183,6 +183,52 @@ try {
   assert(
     response.headers.get("content-disposition")?.includes("xray-zoo.yaml"),
   );
+  const usageHeader = response.headers.get("subscription-userinfo");
+  assert(usageHeader, "Missing subscription usage metadata");
+  const metadata = Object.fromEntries(
+    usageHeader.split(";").map((part) => part.trim().split("=")),
+  );
+  assert.equal(
+    BigInt(metadata.upload) + BigInt(metadata.download),
+    BigInt(a.subscription.usedBytes),
+  );
+  assert.equal(BigInt(metadata.total), BigInt(a.subscription.quotaBytes));
+  assert.equal(
+    Number(metadata.expire),
+    Math.floor(new Date(a.subscription.validUntil).getTime() / 1000),
+  );
+  assert.equal(response.headers.get("profile-update-interval"), "1");
+  assert.equal(
+    response.headers.get("profile-web-page-url"),
+    new URL("/account", settings.webOrigin).href,
+  );
+  const exposed = response.headers
+    .get("access-control-expose-headers")
+    ?.toLowerCase()
+    .split(",")
+    .map((x) => x.trim());
+  for (const name of [
+    "subscription-userinfo",
+    "profile-update-interval",
+    "profile-web-page-url",
+    "content-disposition",
+  ])
+    assert(exposed?.includes(name), `Browser cannot read ${name}`);
+  // A client imports the token URL without a login cookie. HEAD must carry the
+  // same metadata and no body, while GET still produces the original YAML.
+  for (const method of ["GET", "HEAD"]) {
+    const imported = await fetch(a.subscription.url, {
+      method,
+      headers: { "User-Agent": "clash.meta", Origin: settings.webOrigin },
+    });
+    assert.equal(imported.status, 200);
+    assert.equal(imported.headers.get("subscription-userinfo"), usageHeader);
+    assert(imported.headers.get("cache-control")?.includes("no-store"));
+    assert(
+      (await imported.text()) === (method === "HEAD" ? "" : oldYaml),
+      "Token import changed configuration or HEAD returned a body",
+    );
+  }
   const oldUuid = parse(oldYaml).proxies[0].uuid,
     bobYaml = await (await http("/account/config", bob.cookie)).text();
   assert(
@@ -222,10 +268,11 @@ try {
     { expectedVersion: before.desiredVersion },
     201,
   );
-  assert(
-    (await fetch(a.subscription.url)).status === 403,
-    "Revoked link is still downloadable",
-  );
+  for (const method of ["GET", "HEAD"]) {
+    const denied = await fetch(a.subscription.url, { method });
+    assert.equal(denied.status, 403, "Revoked link is still downloadable");
+    assert.equal(denied.headers.get("subscription-userinfo"), null);
+  }
   await http("/account/config", alice.cookie, undefined, 403);
   const revokedImmediate = await json("/account", alice.cookie);
   assert(revokedImmediate.subscription.url === null);
@@ -394,6 +441,8 @@ try {
     rotationCrashRecovery: true,
     adminSuspensionRespected: true,
     renewalPreservesRevocationAndUpdatesPeriod: true,
+    subscriptionUsageHeaders: true,
+    cookieFreeGetAndHead: true,
   };
   writeFileSync(
     root + "/.local/account-validation.json",
@@ -406,7 +455,7 @@ try {
     });
   passed = true;
   console.log(
-    "PASS: owner-only configuration/orders; revoked URL and cached YAML; regenerate with new identity; preserved quota/expiry; durable rotation retry; administrator suspension cannot be bypassed. Live client checks: " +
+    "PASS: subscription usage headers on GET/HEAD and browser exposure; owner-only configuration/orders; revoked URL and cached YAML; regenerate with new identity; preserved quota/expiry; durable rotation retry; administrator suspension cannot be bypassed. Live client checks: " +
       live,
   );
 } finally {
