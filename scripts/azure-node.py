@@ -77,12 +77,15 @@ def skus(api, location, fresh=False):
     quota = {x['name']['value'].lower(): x for x in usages}
     result = []
     for s in raw:
-        if s.get('resourceType')!='virtualMachines' or location not in s.get('locations', []): continue
+        # ARM returns mixed-case names for some regions (e.g. KoreaCentral/UAENorth).
+        # Match both SKU membership and restrictions using canonical region codes.
+        if s.get('resourceType')!='virtualMachines' or location not in [x.lower() for x in (s.get('locations') or [])]: continue
         caps = {x['name']:x['value'] for x in s.get('capabilities', [])}
         cpu = int(caps.get('vCPUs', '0')); memory=float(caps.get('MemoryGB', '0'))
         family = s.get('family', '').lower(); reasons=[]
         for r in s.get('restrictions', []):
-            if r.get('type')=='Location' and (not r.get('values') or location in r['values']): reasons.append(r.get('reasonCode', 'LocationRestricted'))
+            restricted_locations = (r.get('values') or []) + ((r.get('restrictionInfo') or {}).get('locations') or [])
+            if r.get('type')=='Location' and (not restricted_locations or location in [x.lower() for x in restricted_locations]): reasons.append(r.get('reasonCode', 'LocationRestricted'))
         if caps.get('CpuArchitectureType', 'x64').lower() not in ('x64', 'amd64'): reasons.append('当前镜像仅支持 x64')
         if caps.get('HyperVGenerations') and 'V2' not in caps['HyperVGenerations']: reasons.append('需要支持 Gen2 Ubuntu 镜像')
         if cpu < 1 or memory < 1: reasons.append('至少需要 1 vCPU / 1 GiB')

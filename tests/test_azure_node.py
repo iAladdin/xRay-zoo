@@ -79,4 +79,24 @@ class AdapterTests(TestCase):
             usage[0]['currentValue']=10
             self.assertFalse(any(x['available'] for x in adapter.skus(self.api,'eastus2')['items']))
 
+    def test_mixed_case_regions_keep_candidates_and_enforce_restrictions(self):
+        for region, azure_region in [('koreacentral','KoreaCentral'),('koreasouth','KoreaSouth'),('uaenorth','UAENorth')]:
+            with self.subTest(region=region):
+                sku={'resourceType':'virtualMachines','locations':[azure_region],'family':'standardBSFamily','capabilities':[{'name':'vCPUs','value':'2'},{'name':'MemoryGB','value':'1'},{'name':'HyperVGenerations','value':'V2'}]}
+                rows=[
+                    {**sku,'name':'good'},
+                    {**sku,'name':'restricted','restrictions':[{'type':'Location','values':[azure_region],'reasonCode':'NotAvailableForSubscription'}]},
+                    {**sku,'name':'restricted-info','restrictions':[{'type':'Location','restrictionInfo':{'locations':[azure_region]},'reasonCode':'NotAvailableForSubscription'}]},
+                    {**sku,'name':'different-region-restriction','restrictions':[{'type':'Location','values':['EastUS2'],'reasonCode':'NotAvailableForSubscription'}]},
+                    {**sku,'name':'not-in-region','locations':['EastUS2']},
+                ]
+                usage=[{'name':{'value':name},'limit':10,'currentValue':5} for name in ('cores','standardBSFamily')]
+                self.api.items[f'/providers/Microsoft.Compute/locations/{region}/usages?api-version=2024-03-01']=usage
+                with patch.object(adapter,'cached',return_value=rows):result={x['name']:x for x in adapter.skus(self.api,region)['items']}
+                self.assertEqual(len(result),4)
+                self.assertTrue(result['good']['available'])
+                self.assertTrue(result['different-region-restriction']['available'])
+                self.assertEqual(result['restricted']['reasons'],['NotAvailableForSubscription'])
+                self.assertEqual(result['restricted-info']['reasons'],['NotAvailableForSubscription'])
+
 if __name__=='__main__':main()

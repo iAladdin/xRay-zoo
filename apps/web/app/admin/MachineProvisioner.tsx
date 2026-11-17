@@ -259,6 +259,7 @@ function CreateMachine({
   const [onlyAvailable, setOnlyAvailable] = useState(true);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [skusLoading, setSkusLoading] = useState(false);
+  const [skusLoaded, setSkusLoaded] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -293,6 +294,7 @@ function CreateMachine({
   }, [reload]);
   useEffect(() => {
     setSkus([]);
+    setSkusLoaded(false);
     setSize("");
     setPreview(null);
     setSizeSearch("");
@@ -306,7 +308,10 @@ function CreateMachine({
     setError("");
     request<{ items: Sku[] }>("azure/skus?region=" + encodeURIComponent(region))
       .then((data) => {
-        if (generation.current === current) setSkus(data.items);
+        if (generation.current === current) {
+          setSkus(data.items);
+          setSkusLoaded(true);
+        }
       })
       .catch((e) => {
         if (generation.current === current) setError(e.message);
@@ -375,6 +380,7 @@ function CreateMachine({
       (x.name.toLowerCase().includes(sizeSearch.toLowerCase()) ||
         x.name === size),
   );
+  const availableSkus = skus.filter((x) => x.available).length;
   const busy = submitting;
   return (
     <dialog
@@ -463,7 +469,11 @@ function CreateMachine({
             disabled={!region || skusLoading || busy}
           >
             <option value="">
-              {skusLoading ? "正在核验规格和 vCPU 配额…" : "请选择机器规格"}
+              {skusLoading
+                ? "正在核验规格和 vCPU 配额…"
+                : skusLoaded && !visibleSkus.length
+                  ? "没有符合条件的规格"
+                  : "请选择机器规格"}
             </option>
             {visibleSkus.map((x) => (
               <option key={x.name} value={x.name} disabled={!x.available}>
@@ -482,9 +492,36 @@ function CreateMachine({
           </label>
           {skus.length > 0 && (
             <small>
-              {skus.filter((x) => x.available).length} / {skus.length}{" "}
+              {availableSkus} / {skus.length}{" "}
               个规格通过限制、配额与镜像检查。Azure 最终分配仍以实时容量为准。
             </small>
+          )}
+          {skusLoaded && !visibleSkus.length && (
+            <div className="az-alert warning" role="status">
+              <span>
+                {!skus.length
+                  ? "Azure 未返回该区域的机器规格，可重新加载或选择其他区域。"
+                  : !availableSkus && onlyAvailable
+                    ? "当前区域没有通过配额与订阅检查的规格，可查看不可用原因。"
+                    : "没有匹配当前搜索条件的规格。"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!skus.length) setReload((x) => x + 1);
+                  else {
+                    setSizeSearch("");
+                    if (!availableSkus) setOnlyAvailable(false);
+                  }
+                }}
+              >
+                {!skus.length
+                  ? "重新加载"
+                  : !availableSkus && onlyAvailable
+                    ? "查看原因"
+                    : "清除筛选"}
+              </button>
+            </div>
           )}
         </fieldset>
       </div>

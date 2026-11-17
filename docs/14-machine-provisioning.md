@@ -68,6 +68,7 @@ ARM 名称绑定 operation。提交超时先回读原 deployment；重试不会�
 - `pnpm test:provisioning --live-probe`：上述用例外，真实使用现有 JP 节点验证 Mihomo 出口 IP，随后禁用并删除临时测试身份。
 - 管理端权限及普通用户 revoke/regenerate 回归、TypeScript 检查、Next.js 构建已通过。
 - 真实 Azure East US 2 / Standard_B2ats_v2 预检和 ARM `/validate` 已通过，无资源 PUT。浏览器验证区域、规格、费用预览与取消。
+- 修正规格目录对区域代码的大小写匹配：Azure 的 `KoreaCentral`、`KoreaSouth`、`UAENorth` 与小写请求代码按同一区域处理，订阅限制也同步忽略大小写。三个区域的真实规格查询已验证；空列表、配额过滤和搜索无结果均显示对应提示。
 
 本次没有创建第六台收费 VM；完整的新 VM 扩展安装、注册、发布链路仍需首次实际部署时验证。现有五台 P0 节点保持运行。Azure 配额与预检不能保证最终容量。
 
