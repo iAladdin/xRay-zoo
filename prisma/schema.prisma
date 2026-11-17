@@ -31,6 +31,7 @@ model Plan {
   quotaBytes BigInt
   regions String[]
   active Boolean @default(true)
+  globalPool Boolean @default(false)
   orders Order[]
 }
 model Order {
@@ -46,6 +47,7 @@ model Order {
   currency String
   quotaBytes BigInt
   regions String[]
+  globalPool Boolean @default(false)
   checkoutId String? @unique
   checkoutUrl String?
   providerSubscriptionId String?
@@ -81,6 +83,7 @@ model Subscription {
   usedBytes BigInt @default(0)
   meterBaseline BigInt @default(0)
   regions String[]
+  globalPool Boolean @default(false)
   lastUsageAt DateTime?
   lastError String?
   currentPeriodId String?
@@ -141,6 +144,57 @@ model Node {
   xrayVersion String?
   controlLeaseOwner String?
   controlLeaseUntil DateTime?
+  globalPool Boolean @default(false)
+  publishedAt DateTime? @default(now())
+  azureVmId String?
+  vmSize String?
+  controlPort Int? @unique
+  operationId String? @unique
+}
+model ProvisionPlan {
+  id String @id @default(uuid())
+  actorId String
+  snapshot Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  operation ProvisionOperation?
+}
+model ProvisionOperation {
+  id String @id @default(uuid())
+  planId String @unique
+  plan ProvisionPlan @relation(fields:[planId],references:[id])
+  actorId String
+  idempotencyKey String
+  nodeName String @unique
+  region String
+  country String
+  size String
+  controlPort Int @unique
+  phase String @default("queued")
+  status String @default("running")
+  azureState String?
+  checkpoint Json @default("{}")
+  privateState String?
+  errorCode String?
+  attempts Int @default(1)
+  leaseOwner String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  phaseStartedAt DateTime @default(now())
+  finishedAt DateTime?
+  events ProvisionEvent[]
+  @@unique([actorId,idempotencyKey])
+  @@index([status,leaseUntil])
+}
+model ProvisionEvent {
+  id String @id @default(uuid())
+  operationId String
+  operation ProvisionOperation @relation(fields:[operationId],references:[id])
+  phase String
+  message String
+  createdAt DateTime @default(now())
+  @@index([operationId,createdAt])
 }
 model AuditLog {
   id String @id @default(uuid())

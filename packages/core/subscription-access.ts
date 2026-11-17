@@ -3,6 +3,7 @@ import type { Subscription } from "@prisma/client";
 import type { Response } from "express";
 import { db } from "./db.js";
 import { hashToken, randomToken, seal, unseal } from "./crypto.js";
+import { nodePoolWhere } from "./node-pool.js";
 import {
   renderSubscription,
   type SubscriptionNode,
@@ -27,7 +28,7 @@ export async function sendConfig(sub: Subscription | null, res: Response) {
     where: {
       ready: true,
       enabled: true,
-      country: { in: sub.regions },
+      ...nodePoolWhere(sub),
       checkedAt: { gt: new Date(Date.now() - 120_000) },
     },
   });

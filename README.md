@@ -6,10 +6,11 @@
 
 - [普通用户中心与访问撤销](docs/13-customer-account.md)
 - 默认月套餐：50 / 150 / 300 GB，按足额 Azure 亚洲出网成本 × 10 为 US$60 / US$180 / US$360；[计价假设与市场对照](docs/09-unit-economics.md)。
+- [后台上机器：区域、规格、进度与自动订阅池](docs/14-machine-provisioning.md)
 - [管理员后台与节点状态说明](docs/12-admin-console.md)
 - [实际验证结果与限制](docs/10-p0-results.md)
 - [本地运行、Azure 部署与恢复](docs/11-local-runbook.md)
-- 网页：`http://localhost:3100`；用户中心：`http://localhost:3100/account`；管理员：`http://localhost:3100/admin`；API：`http://localhost:3101`。管理员登录后自动进入后台，可查看五区域节点、用户、套餐、订单、用量并管理订阅。
+- 网页：`http://localhost:3100`；用户中心：`http://localhost:3100/account`；管理员：`http://localhost:3100/admin`；API：`http://localhost:3101`。管理员登录后自动进入后台，可新增 Azure 节点、查看区域状态、用户、套餐、订单、用量并管理订阅。
 - 私有节点状态、Azure/Stripe 凭证和导出访问身份均在被 Git 忽略的 `.local/`；不得提交。
 
 ## 首版目标
@@ -22,16 +23,16 @@
 
 ## 推荐技术方案
 
-| 部分 | 首版选择 |
-| --- | --- |
-| 网页 | Next.js + TypeScript + Tailwind / shadcn/ui |
-| 业务服务 | NestJS 模块化单体，REST / OpenAPI |
-| 数据与任务 | PostgreSQL + Prisma，Redis + BullMQ，事务 outbox |
-| Xray 管理 | Remnawave 独立部署，经适配器接入；业务账本属于 xRay-zoo |
-| Azure 编排 | Azure Identity / ARM SDK + Bicep + cloud-init |
-| 支付 | PaymentProvider 接口，优先 Stripe Checkout / Billing / Customer Portal |
-| 配置 | 首版明确支持 Mihomo 的 VLESS + REALITY；不承诺旧版 Clash 兼容 |
-| 初期部署 | 独立控制服务器的 Docker Compose，地区节点使用 Azure Linux VM |
+| 部分       | 首版选择                                                               |
+| ---------- | ---------------------------------------------------------------------- |
+| 网页       | Next.js + TypeScript + Tailwind / shadcn/ui                            |
+| 业务服务   | NestJS 模块化单体，REST / OpenAPI                                      |
+| 数据与任务 | PostgreSQL + Prisma，Redis + BullMQ，事务 outbox                       |
+| Xray 管理  | Remnawave 独立部署，经适配器接入；业务账本属于 xRay-zoo                |
+| Azure 编排 | Azure Identity / ARM SDK + Bicep + cloud-init                          |
+| 支付       | PaymentProvider 接口，优先 Stripe Checkout / Billing / Customer Portal |
+| 配置       | 首版明确支持 Mihomo 的 VLESS + REALITY；不承诺旧版 Clash 兼容          |
+| 初期部署   | 独立控制服务器的 Docker Compose，地区节点使用 Azure Linux VM           |
 
 表格是目标架构。当前网页使用 Next.js 与普通 CSS，P0 登录使用仅限本机的邮箱/密码；Azure 通过隔离的 CLI 登录和 ARM REST 编排。OIDC/MFA、完整 RBAC、网页配置 Azure 凭证和 Customer Portal 属于后续阶段。
 

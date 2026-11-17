@@ -10,6 +10,7 @@ type Account = {
     quotaBytes: string;
     usedBytes: string;
     regions: string[];
+    globalPool: boolean;
     pending: boolean;
     url: string | null;
   };
@@ -21,6 +22,7 @@ type Plan = {
   currency: string;
   quotaBytes: string;
   regions: string[];
+  globalPool: boolean;
 };
 async function call(path: string, body?: unknown) {
   const response = await fetch(API + path, {
@@ -147,7 +149,7 @@ export default function Home() {
             <span>连接你的世界。</span>
           </h1>
           <p>
-            五个区域，按应用选择合适的出口。
+            全球节点，按应用选择合适的出口。
             <br />
             付款后自动开通，导入 Clash 即可使用。
           </p>
@@ -362,14 +364,16 @@ export default function Home() {
         <div className="section-title">
           <div>
             <div className="eyebrow">SIMPLE PLAN</div>
-            <h2>五个区域，按需选择流量。</h2>
+            <h2>全球节点，按需选择流量。</h2>
           </div>
           <p>50 / 150 / 300 GB · 每月共享流量</p>
         </div>
         <div className="plan-grid">
           {plans.map((plan) => (
             <article className="plan" key={plan.id}>
-              <span className="tag mint">五区域共享流量</span>
+              <span className="tag mint">
+                {plan.globalPool ? "全局节点共享流量" : "指定区域共享流量"}
+              </span>
               <h3>{plan.name}</h3>
               <div className="price">
                 ${(plan.amountMinor / 100).toFixed(2)}
@@ -377,7 +381,11 @@ export default function Home() {
               </div>
               <ul>
                 <li>{Number(plan.quotaBytes) / 1e9} GB 全球共享流量</li>
-                <li>JP / SG / US / HK / TW</li>
+                <li>
+                  {plan.globalPool
+                    ? "全局节点池，自动包含新增区域"
+                    : plan.regions.join(" / ")}
+                </li>
                 <li>AI 和 Telegram 专属分流组</li>
                 <li>自动开通 · Clash 订阅</li>
               </ul>

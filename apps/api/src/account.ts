@@ -23,6 +23,7 @@ import {
   changeOwnAccess,
 } from "../../../packages/core/subscription-access.js";
 import { healthState } from "../../../packages/core/node-health.js";
+import { nodePoolWhere } from "../../../packages/core/node-pool.js";
 type AccountRequest = Request & {
   accountUser: { id: string; email: string; role: string };
 };
@@ -80,7 +81,7 @@ export class AccountApi {
         })
       : null;
     const nodes = sub
-      ? await db.node.findMany({ where: { country: { in: sub.regions } } })
+      ? await db.node.findMany({ where: nodePoolWhere(sub) })
       : [];
     return {
       user,
@@ -94,6 +95,7 @@ export class AccountApi {
             quotaBytes: String(sub.quotaBytes),
             usedBytes: String(sub.usedBytes),
             regions: sub.regions,
+            globalPool: sub.globalPool,
             lastUsageAt: sub.lastUsageAt,
             revokedAt: sub.revokedAt,
             pending: sub.desiredVersion !== sub.appliedVersion,

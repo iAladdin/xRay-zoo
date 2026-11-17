@@ -5,7 +5,7 @@ import { z } from "zod";
 export const NodeSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(80),
-  country: z.enum(["JP", "SG", "US", "HK", "TW"]),
+  country: z.string().regex(/^[A-Z]{2}$/),
   address: z
     .string()
     .min(1)

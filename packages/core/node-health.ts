@@ -23,9 +23,11 @@ export function healthState(
     transportConnected: boolean | null;
     checkedAt: Date | null;
     healthReason: string;
+    publishedAt?: Date | null;
   },
   now = Date.now(),
 ) {
+  if (node.publishedAt === null) return "PROVISIONING";
   if (node.healthReason === "ENGINE_UNAVAILABLE") return "ENGINE_UNAVAILABLE";
   if (!node.enabled)
     return node.checkedAt &&
@@ -134,7 +136,7 @@ async function refresh(repair: boolean) {
         where: { id: node.id },
         data: { ...data, ready: false },
       });
-      if (reason === "READY")
+      if (reason === "READY" && node.publishedAt !== null)
         await tx.node.updateMany({
           where: { id: node.id, enabled: true },
           data: { ready: true },
@@ -164,6 +166,7 @@ export async function nodeAction(
   if (!locked.count) throw new Error("NODE_BUSY");
   try {
     const node = await db.node.findUniqueOrThrow({ where: { id } });
+    if (!node.publishedAt) throw new Error("NODE_NOT_PUBLISHED");
     if (!node.engineNodeId) throw new Error("NODE_UNMANAGED");
     await db.auditLog.create({
       data: {
@@ -222,7 +225,11 @@ export async function nodeAction(
 }
 export async function reconcileDisabledNodes() {
   const candidates = await db.node.findMany({
-    where: { enabled: false, engineDisabled: false },
+    where: {
+      enabled: false,
+      engineDisabled: false,
+      publishedAt: { not: null },
+    },
   });
   for (const node of candidates) {
     const owner = randomUUID();

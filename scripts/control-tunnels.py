@@ -50,7 +50,9 @@ def run_node(item):
             try:
                 # ssh -f children retain stderr. PIPE/communicate waits for their EOF and falsely times out.
                 with tempfile.TemporaryFile() as errors:
-                    result = subprocess.run(base+['-M','-f','-N','-L',f'127.0.0.1:{22221+index}:127.0.0.1:2222','-o','ExitOnForwardFailure=yes','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3',destination], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=errors, timeout=15)
+                    port=int(node.get('controlPort',22221+index))
+                    if not 1024<=port<=65535:raise ValueError('Invalid forwarding port')
+                    result = subprocess.run(base+['-M','-f','-N','-L',f'127.0.0.1:{port}:127.0.0.1:2222','-o','ExitOnForwardFailure=yes','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=3',destination], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=errors, timeout=15)
                     active = result.returncode == 0
                     if not active:
                         errors.seek(0)
@@ -66,6 +68,8 @@ def main():
     p.add_argument('--json', action='store_true')
     args=p.parse_args()
     nodes=json.loads((LOCAL/'azure-inventory.json').read_text())['nodes']
+    extra=LOCAL/'provisioned-tunnels.json'
+    if extra.exists():nodes+=json.loads(extra.read_text())
     selected=[(i,n,args.command) for i,n in enumerate(nodes) if args.node is None or n['name']==args.node]
     if not selected: raise SystemExit('Unknown managed node')
     if args.command in ('start','ensure'):ensure_relay()
@@ -75,6 +79,7 @@ def main():
         state=json.loads((LOCAL/'engine-nodes.json').read_text())
         response=engine.request('/nodes'); current=response if isinstance(response,list) else response['nodes']
         for i,n,_ in selected:
+            if n['code'] not in state:continue  # New operations register their explicit control endpoint.
             uuid=state[n['code']]['engineNodeId']; desired={'address':n['code']+'.xray-zoo.control','port':22221+i}
             observed=next((v for v in current if v['uuid']==uuid),{})
             if any(observed.get(k)!=v for k,v in desired.items()): engine.request('/nodes','PATCH',{'uuid':uuid,**desired})

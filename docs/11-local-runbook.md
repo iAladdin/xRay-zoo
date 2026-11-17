@@ -113,6 +113,10 @@ ssh -S .local/probe-transport.sock -O exit xrayzoo@<JP节点IP>
 
 访问 `http://localhost:3100/admin`。已有 ADMIN 用户在首页登录后会自动跳转；普通用户不会进入后台，所有管理 API 也会校验身份。账号不自动公开注册为管理员；本机已有运营账号凭证保存在私有 `.local/operator-admin.json`。详细功能与操作语义见 [管理员后台](12-admin-console.md)。
 
+## 从后台新增机器
+
+进入“区域节点 → 上机器”，选择 Azure 区域和规格，检查配额与费用后提交。任务保存在数据库，worker 重启后会继续；真实连接验证通过后加入订阅池。详细配置、重试和限制见 [上机器运行手册](14-machine-provisioning.md)。
+
 ## 关闭与费用
 
 ```sh

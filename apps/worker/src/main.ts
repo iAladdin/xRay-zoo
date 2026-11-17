@@ -4,6 +4,7 @@ import { db } from "../../../packages/core/db.js";
 import { settings, assertLocalRuntime } from "../../../packages/core/config.js";
 import { processPayment } from "../../../packages/core/billing.js";
 import { syncEntitlement } from "../../../packages/core/entitlements.js";
+import { advanceMachine } from "../../../packages/core/provisioning.js";
 import {
   refreshNodeHealth,
   reconcileDisabledNodes,
@@ -13,6 +14,15 @@ const connection = new Redis(settings.redis.toString(), {
   maxRetriesPerRequest: null,
 });
 const queue = new Queue("xray-zoo", { connection });
+const machineQueue = new Queue("xray-zoo-machines", { connection });
+const machineWorker = new Worker(
+  "xray-zoo-machines",
+  async (job) => advanceMachine(job.data.id),
+  { connection, concurrency: 1 },
+);
+machineWorker.on("failed", () =>
+  console.error("machine step deferred; database or queue unavailable"),
+);
 const worker = new Worker(
   "xray-zoo",
   async (job) => {
@@ -34,6 +44,25 @@ async function reconcile() {
   if (running) return;
   running = true;
   try {
+    const machines = await db.provisionOperation.findMany({
+      where: {
+        status: "running",
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+      take: 50,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const machine of machines)
+      await machineQueue.add(
+        "advance",
+        { id: machine.id },
+        {
+          jobId: `machine-${machine.id}-${Math.floor(Date.now() / 5000)}`,
+          removeOnComplete: 50,
+          removeOnFail: 50,
+        },
+      );
     const outbox = await db.outbox.findMany({
       where: { deliveredAt: null },
       take: 100,
@@ -106,6 +135,8 @@ const interval = setInterval(reconcile, 5000);
 process.on("SIGTERM", async () => {
   clearInterval(interval);
   await worker.close();
+  await machineWorker.close();
+  await machineQueue.close();
   await queue.close();
   await db.$disconnect();
   process.exit(0);

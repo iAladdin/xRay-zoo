@@ -1,17 +1,17 @@
 # Azure 接入与集群编排
 
-状态：设计和输入模板，尚未调用用户的 Azure 创建资源。
+状态：五区 P0 节点已实际部署；2026-11-18 新增本地管理员“上机器”流程。当前实现及验证边界见 [后台上机器运行手册](14-machine-provisioning.md)。下文包含后续生产架构设计，不代表所有目标能力已实现。
 
 ## 管理员需要提供什么
 
 Azure 资源管理使用 Entra 身份，不存在一把可通用创建 VM 的 Azure API Key。Azure OpenAI 的 key 也不能创建机器。
 
-| 认证方式 | 所需内容 | 首版定位 |
-| --- | --- | --- |
-| Service Principal + client secret | tenant ID、client ID、subscription ID、client secret、授权资源组 | 便于首次连接，支持到期提醒与轮换 |
-| Service Principal + certificate | 前三项、含私钥的 PEM/PFX、必要的口令；公钥证书已登记到应用 | 同等支持；只有 `.cer` 公钥不能代表应用签名 |
-| Managed Identity | 控制服务的托管身份及对目标资源组的授权 | 同租户 Azure 部署优先采用，后续简化凭证管理 |
-| Workload Identity Federation | 可信签发方、subject、audience | 用于后续 CI/跨环境部署，首版不做通用配置 UI |
+| 认证方式                          | 所需内容                                                         | 首版定位                                    |
+| --------------------------------- | ---------------------------------------------------------------- | ------------------------------------------- |
+| Service Principal + client secret | tenant ID、client ID、subscription ID、client secret、授权资源组 | 便于首次连接，支持到期提醒与轮换            |
+| Service Principal + certificate   | 前三项、含私钥的 PEM/PFX、必要的口令；公钥证书已登记到应用       | 同等支持；只有 `.cer` 公钥不能代表应用签名  |
+| Managed Identity                  | 控制服务的托管身份及对目标资源组的授权                           | 同租户 Azure 部署优先采用，后续简化凭证管理 |
+| Workload Identity Federation      | 可信签发方、subject、audience                                    | 用于后续 CI/跨环境部署，首版不做通用配置 UI |
 
 凭证存在 Key Vault 或有主密钥保护的 SecretStore，数据库只存引用与指纹。Worker 读取云凭证，用户网页和地区节点拿不到这些凭证。[服务主体与认证方式](https://learn.microsoft.com/en-us/entra/identity-platform/howto-create-service-principal-portal)
 

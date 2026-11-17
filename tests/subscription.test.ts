@@ -48,6 +48,18 @@ test("unavailable Telegram regions fail closed instead of silently using Japan",
   );
   assert.deepEqual(leaves(config, "✈️ Telegram"), ["REJECT"]);
 });
+test("new countries and multiple nodes in one region join only appropriate groups", () => {
+  const extra = [
+    { ...nodes[0], id: "de-1", name: "zoo-DE", country: "DE" },
+    { ...nodes[0], id: "jp-2", name: "zoo-JP-2", country: "JP" },
+  ];
+  const config = buildConfig([...nodes, ...extra], uuid);
+  assert(leaves(config, "♻️ 自动选择").includes("zoo-DE"));
+  assert(!leaves(config, "🤖 AI 服务").includes("zoo-DE"));
+  assert(!leaves(config, "✈️ Telegram").includes("zoo-DE"));
+  assert(leaves(config, "🤖 AI 服务").includes("zoo-JP-2"));
+  assert(!leaves(config, "✈️ Telegram").includes("zoo-JP-2"));
+});
 test("unready and duplicate nodes cannot leak into the configuration", () => {
   assert.throws(
     () =>

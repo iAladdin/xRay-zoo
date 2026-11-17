@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "./db.js";
 import { engine, type EngineUser } from "../engine-remnawave/client.js";
 import { randomToken, hashToken, seal, unseal } from "./crypto.js";
+import { nodePoolWhere } from "./node-pool.js";
 
 export const engineUsername = (subscriptionId: string) =>
   "xz_" + subscriptionId.replaceAll("-", "");
@@ -72,6 +73,7 @@ export async function syncEntitlement(subscriptionId: string) {
               validUntil: period.endAt,
               quotaBytes: period.quotaBytes,
               regions: period.order.regions,
+              globalPool: period.order.globalPool,
               currentPeriodId: period.id,
               meterBaseline: baseline,
               usedBytes:
@@ -104,7 +106,7 @@ export async function syncEntitlement(subscriptionId: string) {
       return;
     }
     const nodes = await db.node.findMany({
-      where: { enabled: true, country: { in: period.order.regions } },
+      where: { enabled: true, ...nodePoolWhere(period.order) },
     });
     const squads = [
       ...new Set(nodes.map((n) => n.squadId).filter((s): s is string => !!s)),
@@ -188,6 +190,7 @@ export async function syncEntitlement(subscriptionId: string) {
         status: remaining > 0n ? "active" : "exhausted",
         validUntil: period.endAt,
         regions: period.order.regions,
+        globalPool: period.order.globalPool,
         quotaBytes: period.quotaBytes,
         usedBytes: used,
         currentPeriodId: period.id,

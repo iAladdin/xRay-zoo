@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import "./admin.css";
+import MachineProvisioner from "./MachineProvisioner";
 const API = "http://localhost:3101";
 const tabs = [
   ["overview", "运营概览", "◫"],
@@ -39,6 +40,8 @@ type NodeRow = {
   usageUpdatedAt: string | null;
   xrayVersion: string | null;
   busy: boolean;
+  publishedAt: string | null;
+  vmSize: string | null;
 };
 type Sub = {
   id: string;
@@ -62,6 +65,7 @@ type Plan = {
   quotaBytes: string;
   regions: string[];
   active: boolean;
+  globalPool: boolean;
   _count: { orders: number };
 };
 type User = {
@@ -113,6 +117,7 @@ const countries: Record<string, string> = {
   TW: "台湾",
 };
 const labels: Record<string, string> = {
+  PROVISIONING: "部署验证中",
   READY: "控制就绪",
   DISABLED: "已停用",
   DISABLE_PENDING: "停用待确认",
@@ -135,6 +140,10 @@ const labels: Record<string, string> = {
   CUSTOMER: "订阅用户",
   ADMIN: "管理员",
 };
+const regionName = (code: string) =>
+  countries[code] ??
+  new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(code) ??
+  code;
 const actionLabel: Record<string, string> = {
   enable: "启用节点",
   disable: "停用节点",
@@ -153,6 +162,9 @@ const auditLabels: Record<string, string> = {
   "subscription.retry": "重新同步订阅",
   "subscription.rotate-link": "重置订阅链接",
   "subscription.copy-link": "复制订阅链接",
+  "machine.create": "提交机器部署",
+  "machine.retry": "重试机器部署",
+  "machine.publish": "节点加入订阅池",
   "plan.create": "创建套餐",
   "plan.update": "编辑套餐",
 };
@@ -443,6 +455,7 @@ export default function Admin() {
         quotaGB: Number(data.get("quota")),
         regions: data.getAll("regions"),
         active: data.get("active") === "on",
+        globalPool: data.get("globalPool") === "on",
       });
       setEditing(null);
       setNotice("套餐已保存。已生成订单与续费合约保留原价格和权益。");
@@ -543,7 +556,10 @@ export default function Admin() {
         </nav>
         <div className="az-side-bottom">
           <span className="az-pulse" /> 本地控制台
-          <small>五个区域 · 一个运营中心</small>
+          <small>
+            {new Set(nodes.map((n) => n.region)).size} 个区域 · {nodes.length}{" "}
+            台节点
+          </small>
         </div>
       </aside>
       <div className="az-workspace">
@@ -655,13 +671,14 @@ export default function Admin() {
               </article>
             </div>
           )}
+          {tab === "nodes" && <MachineProvisioner />}
           {(tab === "overview" || tab === "nodes") && (
             <>
               {nodes.some((n) => !n.ready) && (
                 <div className="az-alert warning">
                   <div>
                     <strong>
-                      {nodes.filter((n) => !n.ready).length} 个区域需要关注
+                      {nodes.filter((n) => !n.ready).length} 台节点需要关注
                     </strong>
                     <p>
                       “控制未就绪”不等于 Azure
@@ -674,7 +691,11 @@ export default function Admin() {
               <section className="az-section">
                 <div className="az-section-head">
                   <h2>
-                    区域网络 <span>05 REGIONS</span>
+                    区域网络{" "}
+                    <span>
+                      {new Set(nodes.map((n) => n.region)).size} REGIONS ·{" "}
+                      {nodes.length} NODES
+                    </span>
                   </h2>
                   {tab === "overview" && (
                     <button className="az-link" onClick={() => choose("nodes")}>
@@ -694,13 +715,15 @@ export default function Admin() {
                           className={"az-dot " + (n.ready ? "on" : "off")}
                         />
                       </div>
-                      <h3>{countries[n.country]}</h3>
+                      <h3>{regionName(n.country)}</h3>
                       <p>{n.region}</p>
                       <Badge value={n.state} />
                       <div className="az-region-footer">
                         {["JP", "SG", "US"].includes(n.country)
                           ? "AI 路由"
-                          : "Telegram 路由"}
+                          : ["HK", "TW"].includes(n.country)
+                            ? "Telegram 路由"
+                            : "通用路由"}
                         <small>{n.address}</small>
                       </div>
                     </article>
@@ -830,7 +853,7 @@ export default function Admin() {
                         ].map((action) => (
                           <button
                             key={action}
-                            disabled={busy || n.busy}
+                            disabled={busy || n.busy || !n.publishedAt}
                             onClick={() =>
                               setConfirm({
                                 kind: "nodes",
@@ -877,7 +900,11 @@ export default function Admin() {
                     <td>{money(p.amountMinor, p.currency)}</td>
                     <td>
                       {bytes(p.quotaBytes)}
-                      <small>{p.regions.join(" / ")}</small>
+                      <small>
+                        {p.globalPool
+                          ? "全局节点池 · 自动包含新增区域"
+                          : p.regions.join(" / ")}
+                      </small>
                     </td>
                     <td>
                       <Badge value={p.active ? "on-sale" : "off-sale"} />
@@ -905,7 +932,7 @@ export default function Admin() {
                 {nodes.map((n) => (
                   <div key={n.id}>
                     <span>
-                      {n.country} · {countries[n.country]}
+                      {n.country} · {regionName(n.country)}
                     </span>
                     <strong>
                       {n.usageUpdatedAt ? bytes(n.usageBytes) : "未采集"}
@@ -1244,7 +1271,13 @@ export default function Admin() {
             <fieldset>
               <legend>可用区域（至少一个）</legend>
               <div className="az-checks">
-                {Object.keys(countries).map((code) => (
+                {Array.from(
+                  new Set([
+                    ...Object.keys(countries),
+                    ...nodes.map((n) => n.country),
+                    ...(editing === "new" ? [] : editing.regions),
+                  ]),
+                ).map((code) => (
                   <label key={code}>
                     <input
                       type="checkbox"
@@ -1259,6 +1292,14 @@ export default function Admin() {
                 ))}
               </div>
             </fieldset>
+            <label className="az-checkbox">
+              <input
+                type="checkbox"
+                name="globalPool"
+                defaultChecked={editing === "new" || editing.globalPool}
+              />
+              自动加入全局节点池（包含以后上线的区域）
+            </label>
             <label className="az-checkbox">
               <input
                 type="checkbox"

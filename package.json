@@ -21,7 +21,9 @@
     "test:integration": "tsx scripts/integration.ts",
     "subscription:render": "tsx scripts/render-subscription.ts",
     "test:admin": "tsx scripts/test-admin.ts",
-    "test:account": "tsx scripts/test-account.ts"
+    "test:account": "tsx scripts/test-account.ts",
+    "test:provisioning": "tsx scripts/test-provisioning.ts",
+    "test:azure": "python3 -m unittest discover -s tests -p 'test_azure_node.py'"
   },
   "dependencies": {
     "@nestjs/common": "12.5.1",

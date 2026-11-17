@@ -11,6 +11,7 @@ type Subscription = {
   quotaBytes: string;
   usedBytes: string;
   regions: string[];
+  globalPool: boolean;
   lastUsageAt: string | null;
   revokedAt: string | null;
   pending: boolean;
@@ -50,6 +51,7 @@ type Plan = {
   currency: string;
   quotaBytes: string;
   regions: string[];
+  globalPool: boolean;
 };
 type Billing = {
   subscriptions: {
@@ -500,7 +502,11 @@ export default function AccountPage() {
                         </div>
                         <div>
                           <span>已含区域</span>
-                          <strong>{sub.regions.join(" / ")}</strong>
+                          <strong>
+                            {sub.globalPool
+                              ? "全局节点池 · 自动扩充"
+                              : sub.regions.join(" / ")}
+                          </strong>
                         </div>
                         <div>
                           <span>自动续费</span>
@@ -664,7 +670,12 @@ export default function AccountPage() {
                           <b>{n.country}</b>
                           <i className={n.ready ? "on" : ""} />
                         </div>
-                        <h3>{regions[n.country]}</h3>
+                        <h3>
+                          {regions[n.country] ??
+                            new Intl.DisplayNames(["zh-CN"], {
+                              type: "region",
+                            }).of(n.country)}
+                        </h3>
                         <span>{n.region}</span>
                         <small>
                           {n.ready ? "节点控制就绪" : "节点暂未就绪"}
@@ -724,7 +735,9 @@ export default function AccountPage() {
                     <ul>
                       <li>{gb(p.quotaBytes)} GB 共享流量</li>
                       <li>
-                        {p.regions.map((r) => regions[r] ?? r).join(" · ")}
+                        {p.globalPool
+                          ? "全局节点池 · 自动包含新增区域"
+                          : p.regions.map((r) => regions[r] ?? r).join(" · ")}
                       </li>
                       <li>Clash / Mihomo 订阅与 YAML 配置</li>
                     </ul>

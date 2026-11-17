@@ -17,6 +17,14 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "../../../packages/core/db.js";
 import { currentUser } from "../../../packages/core/auth.js";
+import { azure, provisionError } from "../../../packages/core/azure.js";
+import {
+  previewMachine,
+  createMachine,
+  retryMachine,
+  machineSelect,
+  machineView,
+} from "../../../packages/core/provisioning.js";
 import {
   hashToken,
   randomToken,
@@ -49,9 +57,9 @@ const pageInput = z.object({
   q: z.string().max(120).default(""),
 });
 const regions = z
-  .array(z.enum(["JP", "SG", "US", "HK", "TW"]))
+  .array(z.string().regex(/^[A-Z]{2}$/))
   .min(1)
-  .max(5)
+  .max(250)
   .refine((v) => new Set(v).size === v.length);
 const planInput = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{1,48}$/),
@@ -61,6 +69,7 @@ const planInput = z.object({
   quotaGB: z.number().int().min(1).max(100000),
   regions,
   active: z.boolean(),
+  globalPool: z.boolean().optional(),
 });
 const subSelect = {
   id: true,
@@ -92,6 +101,83 @@ const paging = (page: number, total: number, items: unknown) => ({
 @Controller("admin")
 @UseGuards(AdminGuard)
 export class AdminApi {
+  @Get("azure/locations") async azureLocations() {
+    try {
+      return await azure("catalog");
+    } catch (e) {
+      throw new HttpException(provisionError(e).message, 503);
+    }
+  }
+  @Get("azure/skus") async azureSkus(@Query() query: unknown) {
+    const { region } = z
+      .object({ region: z.string().regex(/^[a-z0-9]{2,40}$/) })
+      .strict()
+      .parse(query);
+    try {
+      return await azure("skus", { region });
+    } catch (e) {
+      throw new HttpException(provisionError(e).message, 503);
+    }
+  }
+  @Post("machines/preview") async preview(
+    @Req() req: AdminRequest,
+    @Body() body: unknown,
+  ) {
+    const { region, size } = z
+      .object({
+        region: z.string().regex(/^[a-z0-9]{2,40}$/),
+        size: z.string().regex(/^Standard_[A-Za-z0-9_-]{1,70}$/),
+      })
+      .strict()
+      .parse(body);
+    try {
+      return await previewMachine(req.adminId, region, size);
+    } catch (e) {
+      throw new HttpException(provisionError(e).message, 409);
+    }
+  }
+  @Post("machines") async createMachine(
+    @Req() req: AdminRequest,
+    @Body() body: unknown,
+  ) {
+    const v = z
+      .object({ planId: z.string().uuid(), idempotencyKey: z.string().uuid() })
+      .strict()
+      .parse(body);
+    return createMachine(req.adminId, v.planId, v.idempotencyKey);
+  }
+  @Get("machines") async machines() {
+    const [pending, recent] = await Promise.all([
+      db.provisionOperation.findMany({
+        where: { status: { not: "ready" } },
+        orderBy: { createdAt: "desc" },
+        select: machineSelect,
+      }),
+      db.provisionOperation.findMany({
+        where: { status: "ready" },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: machineSelect,
+      }),
+    ]);
+    return [...pending, ...recent]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map(machineView);
+  }
+  @Get("machines/:id") async machine(@Param("id") id: string) {
+    const row = await db.provisionOperation.findUnique({
+      where: { id: z.string().uuid().parse(id) },
+      select: machineSelect,
+    });
+    if (!row) throw new HttpException("部署任务不存在", 404);
+    return machineView(row);
+  }
+  @Post("machines/:id/retry") retryMachine(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+  ) {
+    return retryMachine(req.adminId, z.string().uuid().parse(id));
+  }
   @Get("overview") async overview() {
     const [
       nodes,
@@ -175,6 +261,9 @@ export class AdminApi {
         usageUpdatedAt: n.usageUpdatedAt,
         xrayVersion: n.xrayVersion,
         busy: !!n.controlLeaseUntil && n.controlLeaseUntil > new Date(),
+        publishedAt: n.publishedAt,
+        vmSize: n.vmSize,
+        globalPool: n.globalPool,
       })),
     );
   }
@@ -266,6 +355,7 @@ export class AdminApi {
             amountMinor: input.amountMinor,
             quotaGB,
             regions: input.regions,
+            globalPool: input.globalPool,
           },
         },
       });

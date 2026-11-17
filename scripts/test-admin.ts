@@ -63,6 +63,7 @@ try {
     "/admin/orders",
     "/admin/subscriptions",
     "/admin/audit",
+    "/admin/machines",
   ]) {
     await http(path, "", undefined, 401);
     await http(path, customerCookie, undefined, 403);
@@ -79,10 +80,45 @@ try {
     "/admin/plans",
     "/admin/subscriptions/missing/action",
     "/admin/subscriptions/missing/link",
+    "/admin/machines",
+    "/admin/machines/preview",
+    `/admin/machines/${id}/retry`,
   ]) {
     await http(path, "", {}, 401);
     await http(path, customerCookie, {}, 403);
   }
+  for (const path of [
+    "/admin/azure/locations",
+    "/admin/azure/skus?region=eastus2",
+    `/admin/machines/${id}`,
+  ]) {
+    await http(path, "", undefined, 401);
+    await http(path, customerCookie, undefined, 403);
+  }
+  await http(
+    "/admin/machines",
+    adminCookie,
+    { planId: id, idempotencyKey: randomUUID(), script: "untrusted" },
+    400,
+  );
+  await http(
+    "/admin/machines",
+    adminCookie,
+    { planId: id, idempotencyKey: randomUUID() },
+    404,
+  );
+  await http(
+    "/admin/machines/preview",
+    adminCookie,
+    { region: "eastus2", size: "Standard_B2ats_v2", subscription: "untrusted" },
+    400,
+  );
+  await http(
+    "/admin/azure/skus?region=../untrusted",
+    adminCookie,
+    undefined,
+    400,
+  );
   await http("/admin/users?page=0", adminCookie, undefined, 400);
   await http(
     "/admin/plans",

@@ -29,6 +29,7 @@ export const defaultPlans = [
   quotaBytes: BigInt(quotaGB) * 1_000_000_000n,
   regions: ["JP", "SG", "US", "HK", "TW"],
   active: true,
+  globalPool: true,
 }));
 
 export async function seedDefaultPlans() {

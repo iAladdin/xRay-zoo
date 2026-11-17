@@ -13,6 +13,7 @@ await db.plan.upsert({
     quotaBytes: 20_000_000_000n,
     regions: ["JP", "SG", "US", "HK", "TW"],
     active: false,
+    globalPool: true,
   },
   update: {},
 });
@@ -27,6 +28,7 @@ for (const input of inventory.nodes) {
     configProfileId: input.configProfileId,
     inboundId: input.inboundId,
     squadId: input.squadId,
+    globalPool: true,
     checkedAt: new Date(),
   };
   await db.node.upsert({ where: { id: node.id }, create: data, update: data });

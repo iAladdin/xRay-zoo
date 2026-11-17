@@ -227,6 +227,7 @@ class Api {
           currency: plan.currency,
           quotaBytes: plan.quotaBytes,
           regions: plan.regions,
+          globalPool: plan.globalPool,
         },
       });
     });
