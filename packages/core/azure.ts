@@ -16,6 +16,8 @@ export type AzurePlanSnapshot = {
   templateHash: string;
   cloudInitHash: string;
   nodeImage: string;
+  diskType?: string;
+  diskSizeGiB?: number;
   cost: {
     currency: string;
     computeHourly: number | null;
@@ -35,7 +37,7 @@ export async function azureIp<T>(
 ): Promise<T> {
   return runAzure<T>("azure-ip.py", command, input);
 }
-async function runAzure<T>(
+export async function runAzure<T>(
   script: string,
   command: string,
   input: unknown,
@@ -73,6 +75,13 @@ async function runAzure<T>(
   });
 }
 export const provisionMessages: Record<string, string> = {
+  RELEASE_RESOURCE_CONFLICT:
+    "资源归属或绑定已变化，已停止回收，请核对 Azure 资源",
+  RELEASE_SHARED_NETWORK: "节点网络含共享资源，无法自动回收，请核对资源绑定",
+  RELEASE_INCOMPLETE: "Azure 资源尚未全部释放，重建前请先完成回收",
+  LIFECYCLE_TIMEOUT: "当前阶段超时，可以从已保存的进度重试",
+  NODE_CONFIG_MISSING: "缺少可恢复的节点配置，已停止操作",
+  NODE_BUSY: "节点有其他操作正在进行",
   IP_RESOURCE_SCOPE_CONFLICT: "IP 资源不在项目配置的 Azure 作用域内",
   IP_RESOURCE_OWNERSHIP_CONFLICT: "IP 或网络资源不属于该节点，已停止轮换",
   IP_BINDING_CONFLICT: "Azure 网卡绑定已变化，已停止操作，请核对当前 IP",

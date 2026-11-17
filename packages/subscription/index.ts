@@ -32,19 +32,29 @@ const categories = [
       .map((r) => r.split(",")[1]),
   ),
 ];
-const ruleProviders = Object.fromEntries(
-  categories.map((category) => [
-    "xz-" + category,
-    {
-      type: "http",
-      behavior: "domain",
-      format: "mrs",
-      url: `https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/${encodeURIComponent(category)}.mrs`,
-      path: `./ruleset/xray-zoo/${category}.mrs`,
-      interval: 86400,
-    },
-  ]),
-);
+const ruleProviders = {
+  ...Object.fromEntries(
+    categories.map((category) => [
+      "xz-" + category,
+      {
+        type: "http",
+        behavior: "domain",
+        format: "mrs",
+        url: `https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/${encodeURIComponent(category)}.mrs`,
+        path: `./ruleset/xray-zoo/${category}.mrs`,
+        interval: 86400,
+      },
+    ]),
+  ),
+  "xz-telegram-ip": {
+    type: "http",
+    behavior: "ipcidr",
+    format: "yaml",
+    url: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/telegramcidr.txt",
+    path: "./ruleset/xray-zoo/telegram-ip.yaml",
+    interval: 86400,
+  },
+};
 
 export function buildConfig(input: SubscriptionNode[], accessUuid: string) {
   UUID.parse(accessUuid);
@@ -88,16 +98,30 @@ export function buildConfig(input: SubscriptionNode[], accessUuid: string) {
       mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb",
     },
     rules: [
-      ...nodes.map((n) =>
-        /^\d+\.\d+\.\d+\.\d+$/.test(n.address)
-          ? `IP-CIDR,${n.address}/32,DIRECT,no-resolve`
-          : `DOMAIN,${n.address},DIRECT`,
+      ...new Set(
+        nodes.map((n) =>
+          /^\d+\.\d+\.\d+\.\d+$/.test(n.address)
+            ? `IP-CIDR,${n.address}/32,DIRECT,no-resolve`
+            : `DOMAIN,${n.address},DIRECT`,
+        ),
       ),
-      ...(baseline.rules as string[]).map((rule) =>
-        rule.startsWith("GEOSITE,")
-          ? rule.replace("GEOSITE,", "RULE-SET,xz-")
-          : rule,
-      ),
+      ...[
+        ...new Set(
+          (baseline.rules as string[])
+            .filter((rule) => rule !== "GEOSITE,telegram,✈️ Telegram")
+            .flatMap((rule) => [
+              ...(rule === "GEOSITE,youtube,📺 YouTube"
+                ? [
+                    "RULE-SET,xz-telegram,✈️ Telegram",
+                    "RULE-SET,xz-telegram-ip,✈️ Telegram,no-resolve",
+                  ]
+                : []),
+              rule.startsWith("GEOSITE,")
+                ? rule.replace("GEOSITE,", "RULE-SET,xz-")
+                : rule,
+            ]),
+        ),
+      ],
     ],
     "proxy-groups": [
       select("🚀 节点选择", ["♻️ 自动选择", ...names, "DIRECT"]),

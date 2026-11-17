@@ -130,7 +130,10 @@ export default function MachineProvisioner() {
           <h2>
             上机器 <span>AZURE</span>
           </h2>
-          <p>选择区域与规格，自动部署、验证并加入订阅节点池。</p>
+          <p>
+            选择区域与规格，默认 B2ats_v2 + 32 GiB
+            HDD，验证成功后加入订阅节点池。
+          </p>
         </div>
         <button onClick={() => setOpen(true)}>＋ 上机器</button>
       </div>
@@ -206,7 +209,7 @@ export default function MachineProvisioner() {
           )}
           {op.status === "ready" && (
             <p className="az-machine-success">
-              已通过真实连接验证，并完成订阅同步。用户刷新原订阅链接即可获取新节点。
+              本次部署已完成验证和订阅同步。当前机器是否已回收，以节点列表状态为准。
             </p>
           )}
           <details>
@@ -310,6 +313,12 @@ function CreateMachine({
       .then((data) => {
         if (generation.current === current) {
           setSkus(data.items);
+          if (
+            data.items.some(
+              (s) => s.name === "Standard_B2ats_v2" && s.available,
+            )
+          )
+            setSize("Standard_B2ats_v2");
           setSkusLoaded(true);
         }
       })

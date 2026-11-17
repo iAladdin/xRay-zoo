@@ -110,8 +110,8 @@ def prices(region, size):
             if not url.startswith('https://prices.azure.com/'): raise ValueError('INVALID_PRICING_HOST')
         candidates=[x for x in rows if x.get('type')=='Consumption' and x.get('unitOfMeasure')=='1 Hour' and x.get('productName','').startswith('Virtual Machines') and not any(w in (x.get('productName','')+' '+x.get('skuName','')).lower() for w in ('windows','spot','low priority')) and x.get('isPrimaryMeterRegion',True)]
         rate=min((x['retailPrice'] for x in candidates),default=None)
-        return {'currency':'USD','hoursPerMonth':730,'computeHourly':rate,'computeMonthly':round(rate*730,3) if rate is not None else None,'source':'https://prices.azure.com/api/retail/prices','excludes':['磁盘（32 GiB Standard SSD）','Standard 公网 IPv4','出网流量','磁盘操作、备份和税费']}
-    try: return cached('price-'+region+'-'+size,3600,fetch)
+        return {'currency':'USD','hoursPerMonth':730,'computeHourly':rate,'computeMonthly':round(rate*730,3) if rate is not None else None,'source':'https://prices.azure.com/api/retail/prices','excludes':['磁盘（32 GiB Standard HDD）','Standard 公网 IPv4','出网流量','磁盘操作、备份和税费']}
+    try: return cached('price-hdd-'+region+'-'+size,3600,fetch)
     except Exception: return {'currency':'USD','computeHourly':None,'computeMonthly':None,'excludes':['价格暂不可用；VM、磁盘、公网 IP 和流量均会计费']}
 
 
@@ -139,7 +139,7 @@ def prepare(api, conn, data):
     image=api.request(f'/providers/Microsoft.Compute/locations/{region}/publishers/Canonical/artifacttypes/vmimage/offers/ubuntu-24_04-lts/skus/server/versions/{version}?api-version=2024-03-01')
     if image.get('properties',{}).get('osDiskImage',{}).get('sizeInGb',32)>32: raise ValueError('IMAGE_REQUIRES_LARGER_DISK')
     if not (LOCAL/'node_ssh.pub').exists(): raise ValueError('SSH_KEY_NOT_CONFIGURED')
-    return {**conn,'region':region,'country':loc['country'],'regionName':loc['displayName'],'size':size,'vcpus':sku['vcpus'],'memoryGiB':sku['memoryGiB'],'imageVersion':version,'templateHash':hashlib.sha256((ROOT/'infra/azure/node.bicep').read_bytes()).hexdigest(),'cloudInitHash':hashlib.sha256((ROOT/'infra/azure/cloud-init.yaml').read_bytes()).hexdigest(),'nodeImage':IMAGE,'cost':prices(region,size)}
+    return {**conn,'region':region,'country':loc['country'],'regionName':loc['displayName'],'size':size,'vcpus':sku['vcpus'],'memoryGiB':sku['memoryGiB'],'imageVersion':version,'templateHash':hashlib.sha256((ROOT/'infra/azure/node.bicep').read_bytes()).hexdigest(),'cloudInitHash':hashlib.sha256((ROOT/'infra/azure/cloud-init.yaml').read_bytes()).hexdigest(),'nodeImage':IMAGE,'diskType':'Standard_LRS','diskSizeGiB':32,'cost':prices(region,size)}
 
 
 def deployment(api, conn, data):
@@ -215,13 +215,17 @@ def extension(api,conn,data,submit=False):
 def register_tunnel(data):
     name=data['nodeName'];op=data['operationId'];address=data['address'];port=int(data['controlPort']);key=data['hostKey']
     if not re.fullmatch(r'[a-f0-9-]{36}',op) or not re.fullmatch(r'xz-[a-z0-9-]{5,54}',name): raise ValueError('INVALID_TUNNEL_ID')
-    if not ipaddress.ip_address(address).is_global or not 22300<=port<23000: raise ValueError('INVALID_TUNNEL_TARGET')
+    if not ipaddress.ip_address(address).is_global or not 22221<=port<23000: raise ValueError('INVALID_TUNNEL_TARGET')
     if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]{40,200}',key): raise ValueError('INVALID_HOST_KEY')
     with open(LOCAL/'provisioned-tunnels.lock','a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         hosts=LOCAL/'known_hosts';contents=hosts.read_text() if hosts.exists() else ''
         matches=[line for line in contents.splitlines() if line.split(' ',1)[0]==address]
-        if matches and any(line.split(' ',1)[1].strip()!=key for line in matches): raise ValueError('SSH_HOST_KEY_MISMATCH')
+        if matches and any(line.split(' ',1)[1].strip()!=key for line in matches):
+            released=LOCAL/'released-nodes.json'
+            if not data.get('rebuild') or not released.exists() or not json.loads(released.read_text()).get(name):raise ValueError('SSH_HOST_KEY_MISMATCH')
+            # The replacement key comes from the new VM's authenticated ARM extension result.
+            hosts.write_text('\n'.join(line for line in contents.splitlines() if line not in matches)+'\n');matches=[]
         if not matches:
             with open(hosts,'a') as h:h.write(address+' '+key+'\n')
             hosts.chmod(0o600)
@@ -230,9 +234,21 @@ def register_tunnel(data):
         entry={'code':'machine-'+str(port),'name':name,'address':address,'controlPort':port,'operationId':op}
         if any(x['code']==entry['code'] and x['name']!=name for x in items): raise ValueError('TUNNEL_OWNERSHIP_CONFLICT')
         other=next((x for x in items if x['name']==name),None)
-        if other and other!=entry: raise ValueError('TUNNEL_OWNERSHIP_CONFLICT')
-        if not other:items.append(entry)
+        if other and other!=entry:
+            released=LOCAL/'released-nodes.json'
+            if not data.get('rebuild') or not released.exists() or not json.loads(released.read_text()).get(name):raise ValueError('TUNNEL_OWNERSHIP_CONFLICT')
+            items=[x for x in items if x['name']!=name]
+        if not other or other!=entry:items.append(entry)
         p0.save(path,items)
+        if data.get('rebuild'):
+            with open(LOCAL/'ip-address-overrides.lock','a') as route_lock:
+                fcntl.flock(route_lock,fcntl.LOCK_EX)
+                route=LOCAL/'ip-address-overrides.json';entries=json.loads(route.read_text()) if route.exists() else {}
+                entries.pop(name,None);p0.save(route,entries)
+            with open(LOCAL/'released-nodes.lock','a') as release_lock:
+                fcntl.flock(release_lock,fcntl.LOCK_EX)
+                released=LOCAL/'released-nodes.json';entries=json.loads(released.read_text()) if released.exists() else {}
+                entries.pop(name,None);p0.save(released,entries)
     return {'registered':True}
 
 

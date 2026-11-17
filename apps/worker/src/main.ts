@@ -6,6 +6,7 @@ import { processPayment } from "../../../packages/core/billing.js";
 import { syncEntitlement } from "../../../packages/core/entitlements.js";
 import { advanceMachine } from "../../../packages/core/provisioning.js";
 import { advanceRotation } from "../../../packages/core/ip-rotation.js";
+import { advanceLifecycle } from "../../../packages/core/node-lifecycle.js";
 import { advanceMaintenance } from "../../../packages/core/node-maintenance.js";
 import {
   refreshNodeHealth,
@@ -20,11 +21,13 @@ const machineQueue = new Queue("xray-zoo-machines", { connection });
 const machineWorker = new Worker(
   "xray-zoo-machines",
   async (job) =>
-    job.name === "rotate-ip"
-      ? advanceRotation(job.data.id)
-      : job.name === "maintenance"
-        ? advanceMaintenance(job.data.id)
-        : advanceMachine(job.data.id),
+    job.name === "lifecycle"
+      ? advanceLifecycle(job.data.id)
+      : job.name === "rotate-ip"
+        ? advanceRotation(job.data.id)
+        : job.name === "maintenance"
+          ? advanceMaintenance(job.data.id)
+          : advanceMachine(job.data.id),
   { connection, concurrency: 1 },
 );
 machineWorker.on("failed", () =>
@@ -51,6 +54,25 @@ async function reconcile() {
   if (running) return;
   running = true;
   try {
+    const lifecycles = await db.nodeLifecycle.findMany({
+      where: {
+        status: "running",
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+      take: 50,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const op of lifecycles)
+      await machineQueue.add(
+        "lifecycle",
+        { id: op.id },
+        {
+          jobId: `lifecycle-${op.id}-${Math.floor(Date.now() / 5000)}`,
+          removeOnComplete: 50,
+          removeOnFail: 50,
+        },
+      );
     const batches = await db.nodeMaintenanceBatch.findMany({
       where: {
         status: "running",

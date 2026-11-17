@@ -25,9 +25,12 @@ export function healthState(
     healthReason: string;
     publishedAt?: Date | null;
     addressChanging?: boolean;
+    resourceState?: string;
   },
   now = Date.now(),
 ) {
+  if (node.resourceState && node.resourceState !== "active")
+    return node.resourceState.toUpperCase();
   if (node.publishedAt === null) return "PROVISIONING";
   if (node.addressChanging) return "ROTATING_IP";
   if (node.healthReason === "ENGINE_UNAVAILABLE") return "ENGINE_UNAVAILABLE";
@@ -140,7 +143,13 @@ async function refresh(repair: boolean) {
       });
       if (reason === "READY" && node.publishedAt !== null)
         await tx.node.updateMany({
-          where: { id: node.id, enabled: true, addressChanging: false },
+          where: {
+            id: node.id,
+            enabled: true,
+            addressChanging: false,
+            resourceState: "active",
+            publishedAt: { not: null },
+          },
           data: { ready: true },
         });
     }
@@ -156,6 +165,8 @@ export async function nodeAction(
     where: {
       id,
       activeIpRotationId: null,
+      activeLifecycleId: null,
+      resourceState: "active",
       OR: [
         { controlLeaseUntil: null },
         { controlLeaseUntil: { lt: new Date() } },
@@ -233,6 +244,8 @@ export async function reconcileDisabledNodes() {
       engineDisabled: false,
       publishedAt: { not: null },
       activeIpRotationId: null,
+      activeLifecycleId: null,
+      resourceState: "active",
     },
   });
   for (const node of candidates) {
@@ -242,6 +255,8 @@ export async function reconcileDisabledNodes() {
         id: node.id,
         enabled: false,
         activeIpRotationId: null,
+        activeLifecycleId: null,
+        resourceState: "active",
         OR: [
           { controlLeaseUntil: null },
           { controlLeaseUntil: { lt: new Date() } },

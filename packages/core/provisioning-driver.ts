@@ -44,18 +44,23 @@ async function register(op: MachineOperation) {
     vmId: string;
     hostKey: string;
   };
+  const retainedNode = await db.node.findUnique({ where: { id: op.nodeName } });
   await azure("tunnel", {
     operationId: op.id,
     nodeName: op.nodeName,
     address: state.address,
     hostKey: state.hostKey,
     controlPort: op.controlPort,
+    rebuild: !!retainedNode?.activeLifecycleId,
   });
   const tunnels = await controlTunnels(true, op.nodeName);
   if (!tunnels.some((t) => t.id === op.nodeName && t.connected))
     throw new Error("CONTROL_TRANSPORT_UNAVAILABLE");
   let keys: PrivateState;
-  if (op.privateState) keys = JSON.parse(unseal(op.privateState));
+  if (op.privateState || retainedNode?.realityStateCipher)
+    keys = JSON.parse(
+      unseal(op.privateState ?? retainedNode!.realityStateCipher!),
+    );
   else {
     const pair = generateKeyPairSync("x25519");
     keys = {
@@ -149,6 +154,17 @@ async function register(op: MachineOperation) {
         activeInbounds: [inbound.uuid],
       },
     });
+  await engine.request("/nodes", "PATCH", {
+    uuid: node.uuid,
+    address: p.controlAddress,
+    port: op.controlPort,
+    configProfile: {
+      activeConfigProfileUuid: profile.uuid,
+      activeInbounds: [inbound.uuid],
+    },
+  });
+  if (node.isDisabled)
+    await engine.request(`/nodes/${node.uuid}/actions/enable`, "POST", {});
   let host = (await rows("/hosts", "hosts")).find(
     (x) => x.remark === op.nodeName,
   );
@@ -164,6 +180,15 @@ async function register(op: MachineOperation) {
         configProfileInboundUuid: inbound.uuid,
       },
       nodes: [node.uuid],
+    });
+  if (host)
+    await engine.request("/hosts", "PATCH", {
+      uuid: host.uuid,
+      address: state.address,
+      port: 443,
+      sni: keys.serverName,
+      nodes: [node.uuid],
+      isDisabled: false,
     });
   const data = {
     name: op.nodeName,
@@ -186,6 +211,9 @@ async function register(op: MachineOperation) {
     azureVmId: state.vmId,
     vmSize: op.size,
     controlPort: op.controlPort,
+    realityStateCipher: seal(JSON.stringify(keys)),
+    diskType: "Standard_LRS",
+    diskSizeGiB: 32,
   };
   await db.node.upsert({
     where: { id: op.nodeName },

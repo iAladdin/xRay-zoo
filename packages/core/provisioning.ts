@@ -164,6 +164,27 @@ export async function createMachine(
         },
       },
     });
+    await tx.node.create({
+      data: {
+        id: name,
+        name,
+        region: p.region,
+        country: p.country,
+        address: "",
+        publicKey: "",
+        shortId: "",
+        serverName: "www.cloudflare.com",
+        publishedAt: null,
+        enabled: false,
+        ready: false,
+        resourceState: "rebuilding",
+        vmSize: p.size,
+        diskType: "Standard_LRS",
+        globalPool: true,
+        operationId: id,
+        controlPort: port,
+      },
+    });
     await tx.auditLog.create({
       data: {
         actorId,
@@ -184,6 +205,18 @@ export async function retryMachine(actorId: string, id: string) {
   return db.$transaction(async (tx) => {
     const previous = await tx.provisionOperation.findUnique({ where: { id } });
     if (!previous) throw new HttpException("任务不存在", 404);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"lifecycle:" + previous.nodeName}))`;
+    const currentNode = await tx.node.findUnique({
+      where: { id: previous.nodeName },
+    });
+    if (
+      currentNode &&
+      (currentNode.operationId !== id ||
+        ["released", "releasing"].includes(currentNode.resourceState) ||
+        (currentNode.activeLifecycleId &&
+          currentNode.resourceState !== "rebuilding"))
+    )
+      throw new HttpException("该部署已被回收或替换，不能重试旧任务", 409);
     const phase = previous.phase === "provisioning" ? "queued" : previous.phase;
     const state = previous.checkpoint as Checkpoint;
     const changed = await tx.provisionOperation.updateMany({
@@ -295,6 +328,15 @@ export async function advanceMachine(
       where: { id },
       include: { plan: true },
     });
+    const currentNode = await db.node.findUnique({
+      where: { id: op.nodeName },
+    });
+    if (
+      currentNode &&
+      (currentNode.operationId !== op.id ||
+        ["released", "releasing"].includes(currentNode.resourceState))
+    )
+      throw new Error("PROVISION_SUPERSEDED");
     const state = op.checkpoint as Checkpoint;
     if (Date.now() - op.phaseStartedAt.getTime() > 45 * 60_000)
       throw new Error("PROVISION_PHASE_TIMEOUT");
@@ -368,6 +410,7 @@ export async function advanceMachine(
           await tx.node.update({
             where: { id: node.id },
             data: {
+              resourceState: "active",
               publishedAt: new Date(),
               ready: true,
               enabled: true,

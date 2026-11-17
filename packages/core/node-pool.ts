@@ -5,6 +5,7 @@ export function nodePoolWhere(entitlement: {
   globalPool: boolean;
 }): Prisma.NodeWhereInput {
   return {
+    resourceState: "active",
     publishedAt: { not: null },
     ...(entitlement.globalPool
       ? { OR: [{ globalPool: true }, { country: { in: entitlement.regions } }] }

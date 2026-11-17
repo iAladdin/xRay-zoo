@@ -25,7 +25,8 @@
     "test:provisioning": "tsx scripts/test-provisioning.ts",
     "test:azure": "python3 -m unittest discover -s tests -p 'test_azure_*.py'",
     "test:ip-rotation": "tsx scripts/test-ip-rotation.ts",
-    "test:maintenance": "tsx scripts/test-maintenance.ts"
+    "test:maintenance": "tsx scripts/test-maintenance.ts",
+    "test:lifecycle": "tsx scripts/test-lifecycle.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.5.1",

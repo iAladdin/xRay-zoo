@@ -74,3 +74,16 @@ test("unready and duplicate nodes cannot leak into the configuration", () => {
     /DUPLICATE_NODE_NAME/,
   );
 });
+
+test("maintained Telegram IP ranges and domains precede general country routing", () => {
+  const c = buildConfig(nodes, uuid);
+  const tg = c.rules.indexOf("RULE-SET,xz-telegram-ip,✈️ Telegram,no-resolve");
+  assert(tg > 0 && tg < c.rules.indexOf("GEOIP,CN,DIRECT"));
+  assert(tg < c.rules.indexOf("RULE-SET,xz-google,🔍 Google"));
+  assert(
+    c.rules.indexOf("RULE-SET,xz-category-ai-!cn,🤖 AI 服务") <
+      c.rules.indexOf("RULE-SET,xz-google,🔍 Google"),
+  );
+  assert.equal(c["rule-providers"]["xz-telegram-ip"].behavior, "ipcidr");
+  assert.equal(new Set(c.rules).size, c.rules.length);
+});

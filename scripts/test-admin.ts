@@ -70,7 +70,7 @@ try {
     await http(path, customerCookie, undefined, 403);
     const { data } = await http(path, adminCookie);
     assert(
-      !/"(?:passwordHash|tokenHash|tokenCipher|accessUuidCipher|publicKey|shortId|checkoutUrl)"/.test(
+      !/"(?:passwordHash|tokenHash|tokenCipher|accessUuidCipher|publicKey|shortId|checkoutUrl|realityStateCipher|deploymentConfig)"/.test(
         JSON.stringify(data),
       ),
     );
@@ -87,6 +87,7 @@ try {
     "/admin/nodes/xz-p0-jp/ip-rotation/preview",
     "/admin/nodes/xz-p0-jp/ip-rotation",
     `/admin/ip-rotations/${id}/retry`,
+    `/admin/node-lifecycles/${id}/retry`,
     `/admin/ip-rotations/${id}/rollback`,
     "/admin/node-maintenance",
   ]) {
@@ -99,6 +100,7 @@ try {
     `/admin/machines/${id}`,
     `/admin/ip-rotations/${id}`,
     `/admin/node-maintenance/${id}`,
+    `/admin/node-lifecycles/${id}`,
   ]) {
     await http(path, "", undefined, 401);
     await http(path, customerCookie, undefined, 403);

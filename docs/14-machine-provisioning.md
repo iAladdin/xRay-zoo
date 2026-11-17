@@ -6,7 +6,7 @@
 
 1. 搜索并选择当前 Azure 订阅的物理区域。区域来自订阅 Locations 和 Compute Provider 元数据；不支持 VM 的区域显示禁用。此次真实查询返回 65 个物理区域、51 个支持 Compute，数量可能变化。
 2. 选择规格。实时读取 Resource SKUs、区域/规格族 vCPU 使用量，过滤订阅限制、架构、镜像代际及最低 1 GiB 内存。关闭“仅显示当前可用规格”可看不可用原因。区域元数据缓存 15 分钟，SKU 5 分钟，配额每次实时查询。
-3. 点击“检查规格与费用”：再次检查 SKU、vCPU、公网 IP 配额、Ubuntu 24.04 镜像和资源组所有权。保存 15 分钟有效、绑定管理员的不可变预览。显示 1 台 VM、32 GiB Standard SSD、Standard IPv4 和专属网络。Azure Retail Prices 的金额**仅为 Linux 按需计算费用**，按 730 小时/月估算，磁盘、IP、流量、磁盘操作、备份、税另计；查询失败不会伪造零价。
+3. 点击“检查规格与费用”：再次检查 SKU、vCPU、公网 IP 配额、Ubuntu 24.04 镜像和资源组所有权。保存 15 分钟有效、绑定管理员的不可变预览。显示 1 台 VM、32 GiB Standard HDD、Standard IPv4 和专属网络。Azure Retail Prices 的金额**仅为 Linux 按需计算费用**，按 730 小时/月估算，磁盘、IP、流量、磁盘操作、备份、税另计；查询失败不会伪造零价。
 4. 点击“上机器”：以 planId 和幂等键落库任务。创建后每 3 秒读取进度，关闭窗口或刷新页面不会丢失任务。重试原请求/同一预览始终返回原任务；重新预览并提交才代表另一台机器。
 5. 后台持续显示：等待创建 → 创建 Azure 资源 → 自动安装节点 → 接入控制引擎 → 验证真实连接 → 更新订阅节点池 → 已上线。进度按实际阶段更新，不估算剩余秒数。
 
@@ -73,3 +73,5 @@ ARM 名称绑定 operation。提交超时先回读原 deployment；重试不会�
 本次没有创建第六台收费 VM；完整的新 VM 扩展安装、注册、发布链路仍需首次实际部署时验证。现有五台 P0 节点保持运行。Azure 配额与预检不能保证最终容量。
 
 参考：[Locations](https://learn.microsoft.com/rest/api/resources/subscriptions/list-locations)、[Resource SKUs](https://learn.microsoft.com/en-us/rest/api/compute/resource-skus/list)、[Custom Script Linux](https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-linux)。
+
+默认操作入口已升级为[按区域批量启动与回收](17-disposable-nodes.md)；本页的单台自选规格入口保留在“高级部署”中。

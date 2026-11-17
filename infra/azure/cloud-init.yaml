@@ -6,7 +6,17 @@ packages:
   - ca-certificates
   - curl
   - jq
+write_files:
+  - path: /etc/systemd/journald.conf.d/xray-zoo.conf
+    permissions: '0644'
+    content: |
+      [Journal]
+      SystemMaxUse=64M
+      RuntimeMaxUse=32M
+      MaxRetentionSec=7day
 runcmd:
+  - [systemctl, restart, systemd-journald]
+  - [apt-get, clean]
   - [systemctl, enable, --now, docker]
   - [install, -d, -m, '0700', /opt/xray-zoo]
   - [sh, -c, 'printf ready > /opt/xray-zoo/bootstrap-ready']

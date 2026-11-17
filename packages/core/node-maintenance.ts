@@ -3,17 +3,40 @@ import { HttpException } from "@nestjs/common";
 import type { Node, NodeMaintenanceBatch, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "./db.js";
+import { phaseLabels } from "./provisioning.js";
 import { nodeAction } from "./node-health.js";
+import { azure, provisionError } from "./azure.js";
+import {
+  createLifecycle,
+  lifecycleView,
+  DEFAULT_SIZE,
+} from "./node-lifecycle.js";
 import { createRotation, rotationView } from "./ip-rotation.js";
 
 export const maintenanceInput = z
   .object({
-    action: z.enum(["enable", "disable", "restart", "reconnect", "rotate-ip"]),
+    action: z.enum([
+      "enable",
+      "disable",
+      "restart",
+      "reconnect",
+      "rotate-ip",
+      "release",
+      "rebuild",
+    ]),
     nodeIds: z
       .array(z.string().min(1).max(100))
       .min(1)
       .max(50)
-      .refine((v) => new Set(v).size === v.length, "节点不可重复"),
+      .refine((v) => new Set(v).size === v.length, "节点不可重复")
+      .optional(),
+    regions: z
+      .array(z.string().regex(/^[a-z0-9]{2,40}$/))
+      .min(1)
+      .max(50)
+      .refine((v) => new Set(v).size === v.length)
+      .optional(),
+    all: z.literal(true).optional(),
     idempotencyKey: z.string().uuid(),
     plans: z
       .array(
@@ -30,10 +53,19 @@ export const maintenanceInput = z
   .strict()
   .superRefine((v, ctx) => {
     if (
+      Number(!!v.nodeIds) + Number(!!v.regions) + Number(!!v.all) !== 1 ||
+      (v.regions && v.action !== "rebuild") ||
+      (v.all && v.action !== "release")
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "请选择节点，或指定启动区域，或回收全部机器",
+      });
+    if (
       v.plans &&
       (v.action !== "rotate-ip" ||
         new Set(v.plans.map((p) => p.nodeId)).size !== v.plans.length ||
-        v.plans.some((p) => !v.nodeIds.includes(p.nodeId)))
+        v.plans.some((p) => !v.nodeIds?.includes(p.nodeId)))
     )
       ctx.addIssue({ code: "custom", message: "预检与节点不匹配" });
     if (v.action === "rotate-ip" && !v.plans?.length)
@@ -47,6 +79,8 @@ export type MaintenanceItem = {
   name: string;
   planId?: string;
   rotationId?: string;
+  lifecycleId?: string;
+  expectedOperationId?: string | null;
   status:
     | "queued"
     | "running"
@@ -61,6 +95,21 @@ const pending = (item: MaintenanceItem) =>
   ["queued", "running"].includes(item.status);
 function unavailable(node: Node | undefined, action: Action) {
   if (!node) return "节点不存在";
+  if (action === "release" || action === "rebuild") {
+    if (
+      node.activeIpRotationId ||
+      (node.controlLeaseUntil && node.controlLeaseUntil > new Date())
+    )
+      return "节点有其他操作进行中，已跳过";
+    if (node.activeLifecycleId) return null;
+    if (action === "release" && node.resourceState === "released")
+      return "节点已经回收";
+    if (action === "rebuild" && node.resourceState !== "released")
+      return "该区域已有机器，已跳过；需要更换时请先回收";
+    return null;
+  }
+  if (node.activeLifecycleId || node.resourceState !== "active")
+    return "节点正在回收/重建或已释放，已跳过";
   if (!node.publishedAt) return "节点尚未上线，已跳过";
   if (!node.engineNodeId) return "节点未接入管理引擎，已跳过";
   if (
@@ -73,7 +122,7 @@ function unavailable(node: Node | undefined, action: Action) {
 }
 export function maintenanceView(batch: NodeMaintenanceBatch) {
   const items = (batch.items as unknown as MaintenanceItem[]).map(
-    ({ planId, ...item }) => item,
+    ({ planId, expectedOperationId, ...item }) => item,
   );
   return {
     id: batch.id,
@@ -93,19 +142,39 @@ export function maintenanceView(batch: NodeMaintenanceBatch) {
     },
   };
 }
-export async function createMaintenance(actorId: string, value: unknown) {
+export async function createMaintenance(
+  actorId: string,
+  value: unknown,
+  catalog = () =>
+    azure<{
+      locations: { name: string; country: string | null; available: boolean }[];
+    }>("catalog"),
+) {
   const input = maintenanceInput.parse(value);
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
         action: input.action,
-        nodeIds: [...input.nodeIds].sort(),
+        nodeIds: [...(input.nodeIds ?? [])].sort(),
+        ...(input.regions ? { regions: [...input.regions].sort() } : {}),
+        ...(input.all ? { all: true } : {}),
         plans: [...(input.plans ?? [])].sort((a, b) =>
           a.nodeId.localeCompare(b.nodeId),
         ),
       }),
     )
     .digest("hex");
+  const accepted = await db.nodeMaintenanceBatch.findUnique({
+    where: {
+      actorId_idempotencyKey: { actorId, idempotencyKey: input.idempotencyKey },
+    },
+  });
+  if (accepted) {
+    if (accepted.requestHash !== requestHash)
+      throw new HttpException("请求标识已用于其他批量操作", 409);
+    return maintenanceView(accepted);
+  }
+  const locations = input.regions ? (await catalog()).locations : [];
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actorId + input.idempotencyKey}))`;
     const prior = await tx.nodeMaintenanceBatch.findUnique({
@@ -121,9 +190,52 @@ export async function createMaintenance(actorId: string, value: unknown) {
         throw new HttpException("请求标识已用于其他批量操作", 409);
       return maintenanceView(prior);
     }
-    const nodes = await tx.node.findMany({
-      where: { id: { in: input.nodeIds } },
-    });
+    let nodeIds = input.nodeIds ?? [];
+    if (input.all)
+      nodeIds = (
+        await tx.node.findMany({
+          where: { resourceState: { not: "released" } },
+          select: { id: true },
+          orderBy: { name: "asc" },
+        })
+      ).map((n) => n.id);
+    if (input.regions) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(682139003)`;
+      for (const region of [...input.regions].sort()) {
+        const loc = locations.find(
+          (l) => l.name === region && l.available && l.country,
+        );
+        if (!loc) throw new HttpException("Azure 区域不可用：" + region, 409);
+        const existing = await tx.node.findMany({
+          where: { region },
+          orderBy: { name: "asc" },
+        });
+        let node =
+          existing.find((n) => n.resourceState !== "released") ?? existing[0];
+        if (!node)
+          node = await tx.node.create({
+            data: {
+              id: "xz-" + region,
+              name: "xz-" + region,
+              region,
+              country: loc.country!,
+              address: "",
+              publicKey: "",
+              shortId: "",
+              serverName: "www.cloudflare.com",
+              publishedAt: null,
+              enabled: false,
+              ready: false,
+              resourceState: "released",
+              vmSize: DEFAULT_SIZE,
+              diskType: "Standard_LRS",
+              globalPool: true,
+            },
+          });
+        nodeIds.push(node.id);
+      }
+    }
+    const nodes = await tx.node.findMany({ where: { id: { in: nodeIds } } });
     const plans = await tx.provisionPlan.findMany({
       where: {
         id: { in: (input.plans ?? []).map((p) => p.planId) },
@@ -132,7 +244,7 @@ export async function createMaintenance(actorId: string, value: unknown) {
         expiresAt: { gt: new Date() },
       },
     });
-    const items: MaintenanceItem[] = input.nodeIds.map((nodeId) => {
+    const items: MaintenanceItem[] = nodeIds.map((nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
       const planId = input.plans?.find((p) => p.nodeId === nodeId)?.planId;
       const plan = plans.find((p) => p.id === planId);
@@ -151,6 +263,9 @@ export async function createMaintenance(actorId: string, value: unknown) {
         id: randomUUID(),
         nodeId,
         name: node?.name ?? nodeId,
+        ...(["release", "rebuild"].includes(input.action)
+          ? { expectedOperationId: node?.operationId ?? null }
+          : {}),
         ...(plan && !reason ? { planId: plan.id } : {}),
         status: reason ? "skipped" : "queued",
         message: reason ?? "等待执行",
@@ -173,7 +288,7 @@ export async function createMaintenance(actorId: string, value: unknown) {
         actorId,
         action: "node.batch.requested",
         targetId: batch.id,
-        detail: { action: input.action, nodeIds: input.nodeIds },
+        detail: { action: input.action, nodeIds },
       },
     });
     return maintenanceView(batch);
@@ -183,10 +298,12 @@ export async function createMaintenance(actorId: string, value: unknown) {
 export interface MaintenanceDriver {
   execute: typeof nodeAction;
   rotate: typeof createRotation;
+  lifecycle?: typeof createLifecycle;
 }
 const driverDefault: MaintenanceDriver = {
   execute: nodeAction,
   rotate: createRotation,
+  lifecycle: createLifecycle,
 };
 export async function advanceMaintenance(id: string, driver = driverDefault) {
   const owner = randomUUID();
@@ -241,7 +358,42 @@ export async function advanceMaintenance(id: string, driver = driverDefault) {
     // An interrupted engine request may have succeeded. Never automatically replay
     // a restart (or other maintenance action) merely because its response was lost.
     for (const item of items.filter((i) => i.status === "running")) {
-      if (action !== "rotate-ip") {
+      if (action === "release" || action === "rebuild") {
+        const op = item.lifecycleId
+          ? await db.nodeLifecycle.findUnique({
+              where: { id: item.lifecycleId },
+            })
+          : await db.nodeLifecycle.findUnique({
+              where: {
+                actorId_idempotencyKey: {
+                  actorId: batch.actorId,
+                  idempotencyKey: item.id,
+                },
+              },
+            });
+        if (!op) {
+          item.status = "queued";
+          continue;
+        }
+        item.lifecycleId = op.id;
+        item.status =
+          op.status === "complete"
+            ? "ready"
+            : op.status === "failed"
+              ? "failed"
+              : "running";
+        item.message =
+          op.status === "failed"
+            ? (lifecycleView(op).error ?? "任务失败，可重试")
+            : lifecycleView(op).phaseLabel;
+        if (op.status === "running" && op.machineId) {
+          const m = await db.provisionOperation.findUnique({
+            where: { id: op.machineId },
+            select: { phase: true },
+          });
+          if (m) item.message += " · " + (phaseLabels[m.phase] ?? m.phase);
+        }
+      } else if (action !== "rotate-ip") {
         item.status = "unknown";
         item.message =
           "上次执行被中断，结果待核实；请检查节点后决定是否重新操作";
@@ -286,7 +438,14 @@ export async function advanceMaintenance(id: string, driver = driverDefault) {
       }
     }
     const node = await db.node.findUnique({ where: { id: item.nodeId } });
-    const reason = unavailable(node ?? undefined, action);
+    const changedGeneration =
+      (action === "release" || action === "rebuild") &&
+      item.expectedOperationId !== undefined &&
+      node &&
+      node.operationId !== item.expectedOperationId;
+    const reason = changedGeneration
+      ? "节点已由其他任务重新部署，请重新选择；本次操作已跳过"
+      : unavailable(node ?? undefined, action);
     if (reason) {
       item.status = "skipped";
       item.message = reason;
@@ -297,7 +456,16 @@ export async function advanceMaintenance(id: string, driver = driverDefault) {
     item.message = "正在执行";
     await save(); // Persist before the side effect; a crash becomes 'unknown', not a blind retry.
     try {
-      if (action === "rotate-ip") {
+      if (action === "release" || action === "rebuild") {
+        const op = await (driver.lifecycle ?? createLifecycle)(
+          batch.actorId,
+          item.nodeId,
+          action,
+          item.id,
+        );
+        item.lifecycleId = op.id;
+        item.message = action === "release" ? "正在回收资源" : "正在重建机器";
+      } else if (action === "rotate-ip") {
         const op = await driver.rotate(
           batch.actorId,
           item.nodeId,
@@ -312,6 +480,29 @@ export async function advanceMaintenance(id: string, driver = driverDefault) {
         item.message = "操作已提交，以节点最新检测状态为准";
       }
     } catch (error) {
+      if (action === "release" || action === "rebuild") {
+        const accepted = await db.nodeLifecycle.findUnique({
+          where: {
+            actorId_idempotencyKey: {
+              actorId: batch.actorId,
+              idempotencyKey: item.id,
+            },
+          },
+        });
+        if (accepted) {
+          item.lifecycleId = accepted.id;
+          item.message = "任务已恢复";
+          await save();
+          return;
+        }
+        item.status = "failed";
+        item.message =
+          error instanceof HttpException
+            ? error.message
+            : provisionError(error).message;
+        await save();
+        return;
+      }
       if (action === "rotate-ip") {
         const accepted = await db.ipRotation.findUnique({
           where: {

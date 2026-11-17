@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import "./admin.css";
+import RegionFleet from "./RegionFleet";
 import MachineProvisioner from "./MachineProvisioner";
 import IpRotationDialog, { type IpRotation } from "./IpRotationDialog";
 import NodeMaintenance from "./NodeMaintenance";
@@ -44,6 +45,16 @@ type NodeRow = {
   busy: boolean;
   publishedAt: string | null;
   vmSize: string | null;
+  resourceState: string;
+  activeLifecycleId: string | null;
+  diskType: string;
+  diskSizeGiB: number;
+  lifecycle: {
+    id: string;
+    status: string;
+    phaseLabel: string;
+    error: string | null;
+  } | null;
   activeIpRotationId: string | null;
   ipRotation: IpRotation | null;
 };
@@ -124,7 +135,10 @@ const labels: Record<string, string> = {
   ROTATING_IP: "IP 切换中",
   PROVISIONING: "部署验证中",
   READY: "控制就绪",
-  DISABLED: "已停用",
+  RELEASED: "已回收",
+  RELEASING: "回收中",
+  REBUILDING: "启动 / 重建中",
+  DISABLED: "代理已暂停",
   DISABLE_PENDING: "停用待确认",
   "on-sale": "已上架",
   "off-sale": "已下架",
@@ -150,7 +164,9 @@ const regionName = (code: string) =>
   new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(code) ??
   code;
 const actionLabel: Record<string, string> = {
-  enable: "启用节点",
+  release: "停止并回收",
+  rebuild: "启动 / 重建",
+  enable: "启用代理",
   disable: "停用节点",
   restart: "重启节点服务",
   reconnect: "重连控制隧道",
@@ -687,14 +703,35 @@ export default function Admin() {
               </article>
             </div>
           )}
-          {tab === "nodes" && <MachineProvisioner />}
+          {tab === "nodes" && (
+            <>
+              <RegionFleet nodes={nodes} onRefresh={() => load()} />
+              <details className="az-advanced-machines">
+                <summary>高级部署：自选规格、额外节点及部署历史</summary>
+                <MachineProvisioner />
+              </details>
+            </>
+          )}
           {(tab === "overview" || tab === "nodes") && (
             <>
-              {nodes.some((n) => !n.ready) && (
+              {nodes.some(
+                (n) =>
+                  (n.resourceState === "active" && n.enabled && !n.ready) ||
+                  n.lifecycle?.status === "failed",
+              ) && (
                 <div className="az-alert warning">
                   <div>
                     <strong>
-                      {nodes.filter((n) => !n.ready).length} 台节点需要关注
+                      {
+                        nodes.filter(
+                          (n) =>
+                            (n.resourceState === "active" &&
+                              n.enabled &&
+                              !n.ready) ||
+                            n.lifecycle?.status === "failed",
+                        ).length
+                      }{" "}
+                      台节点需要关注
                     </strong>
                     <p>
                       “控制未就绪”不等于 Azure
@@ -823,7 +860,7 @@ export default function Admin() {
               <div className="az-section-head">
                 <h2>连接与维护</h2>
                 <small>
-                  停用会阻止该节点继续提供服务，不会释放 Azure 资源。
+                  停止并回收会释放机器、磁盘和 IP；配置保留，可一键重建。
                 </small>
               </div>
               <NodeMaintenance
@@ -857,7 +894,9 @@ export default function Admin() {
                       <input
                         type="checkbox"
                         aria-label={"选择节点 " + n.name}
-                        disabled={busy || n.busy || !n.publishedAt}
+                        disabled={
+                          busy || (n.busy && n.lifecycle?.status !== "failed")
+                        }
                         checked={selectedNodes.includes(n.id)}
                         onChange={(e) =>
                           setSelectedNodes((ids) =>
@@ -871,10 +910,19 @@ export default function Admin() {
                     <td>
                       <strong>{n.name}</strong>
                       <small>
-                        {n.address}:{n.port}
+                        {n.address
+                          ? `${n.address}:${n.port}`
+                          : n.resourceState === "rebuilding"
+                            ? "正在分配新地址"
+                            : "资源已释放，等待启动"}
                       </small>
                       <small>
-                        {n.xrayVersion ? `Xray ${n.xrayVersion}` : "版本未获取"}
+                        {n.vmSize ?? "Standard_B2ats_v2"} · {n.diskSizeGiB} GiB{" "}
+                        {["released", "rebuilding"].includes(n.resourceState)
+                          ? "HDD（重建配置）"
+                          : n.diskType === "Standard_LRS"
+                            ? "HDD"
+                            : "SSD"}
                       </small>
                     </td>
                     <td>
@@ -889,6 +937,13 @@ export default function Admin() {
                         · 引擎：{n.engineConnected ? "已连接" : "未连接"}
                       </small>
                       <small>最后就绪：{date(n.lastHealthyAt)}</small>
+                      {n.lifecycle && (
+                        <small>
+                          {n.lifecycle.status === "failed"
+                            ? `任务失败：${n.lifecycle.error}`
+                            : n.lifecycle.phaseLabel}
+                        </small>
+                      )}
                       {n.ipRotation && (
                         <small>
                           IP 轮换：
@@ -900,11 +955,33 @@ export default function Admin() {
                     <td>
                       {date(n.checkedAt)}
                       <small>
-                        {n.enabled ? "期望状态：启用" : "期望状态：停用"}
+                        {n.resourceState === "active"
+                          ? n.enabled
+                            ? "期望状态：启用"
+                            : "期望状态：停用"
+                          : n.resourceState === "released"
+                            ? "配置已保留，可随时启动"
+                            : "后台任务持续执行"}
                       </small>
                     </td>
                     <td>
                       <div className="az-row-actions">
+                        {n.lifecycle?.status === "failed" && (
+                          <button
+                            disabled={busy}
+                            onClick={() =>
+                              perform(async () => {
+                                await api(
+                                  `/admin/node-lifecycles/${n.lifecycle!.id}/retry`,
+                                  {},
+                                );
+                                setNotice("已从保存进度重试");
+                              })
+                            }
+                          >
+                            重试回收 / 重建
+                          </button>
+                        )}
                         <button
                           disabled={
                             busy ||
@@ -916,13 +993,23 @@ export default function Admin() {
                           {n.activeIpRotationId ? "查看 IP 轮换" : "轮换 IP"}
                         </button>
                         {[
-                          n.enabled ? "disable" : "enable",
-                          "reconnect",
-                          "restart",
+                          ...(n.resourceState === "released"
+                            ? ["rebuild"]
+                            : ["release"]),
+                          ...(n.resourceState === "active"
+                            ? ["reconnect", "restart"]
+                            : []),
                         ].map((action) => (
                           <button
                             key={action}
-                            disabled={busy || n.busy || !n.publishedAt}
+                            disabled={
+                              busy ||
+                              (n.busy &&
+                                !(
+                                  action === "release" &&
+                                  n.lifecycle?.status === "failed"
+                                ))
+                            }
                             onClick={() =>
                               setConfirm({
                                 kind: "nodes",
@@ -1230,19 +1317,23 @@ export default function Admin() {
               操作对象：<strong>{confirm.name}</strong>
             </p>
             <p>
-              {confirm.action === "disable"
-                ? "将停止该区域节点服务，并从新订阅配置中移除。现有连接可能中断；Azure 资源仍继续计费。"
-                : confirm.action === "restart"
-                  ? "将重启该节点的代理服务，当前连接可能短暂中断。"
-                  : confirm.action === "rotate-link"
-                    ? "旧链接立即失效，新链接由用户在账户页获取。已下载的 YAML 仍可使用；如需停止访问，请暂停订阅。"
-                    : confirm.action === "suspend"
-                      ? "暂停后立即停止提供订阅下载，并向节点同步撤销授权。此操作不会取消 Stripe 自动续费。"
-                      : confirm.action === "resume"
-                        ? "仅恢复仍在已付服务期内的订阅，保留原到期时间和已用流量。"
-                        : confirm.action === "reconnect"
-                          ? "尝试重建本机到此节点的 SSH 控制隧道，完成后重新检测连接。"
-                          : "提交操作并等待引擎同步，最终结果以检测状态为准。"}
+              {confirm.action === "release"
+                ? "将停止节点并释放 VM、系统盘、网卡和公网 IP，配置及用户权益保留。当前连接将断开，需要时可一键重建。"
+                : confirm.action === "rebuild"
+                  ? "按保留配置重建，使用 32 GiB Standard HDD。真实连接验证通过后自动加入订阅机器池，用户刷新原订阅链接获取新 IP。"
+                  : confirm.action === "disable"
+                    ? "将停止该区域节点服务，并从新订阅配置中移除。现有连接可能中断；Azure 资源仍继续计费。"
+                    : confirm.action === "restart"
+                      ? "将重启该节点的代理服务，当前连接可能短暂中断。"
+                      : confirm.action === "rotate-link"
+                        ? "旧链接立即失效，新链接由用户在账户页获取。已下载的 YAML 仍可使用；如需停止访问，请暂停订阅。"
+                        : confirm.action === "suspend"
+                          ? "暂停后立即停止提供订阅下载，并向节点同步撤销授权。此操作不会取消 Stripe 自动续费。"
+                          : confirm.action === "resume"
+                            ? "仅恢复仍在已付服务期内的订阅，保留原到期时间和已用流量。"
+                            : confirm.action === "reconnect"
+                              ? "尝试重建本机到此节点的 SSH 控制隧道，完成后重新检测连接。"
+                              : "提交操作并等待引擎同步，最终结果以检测状态为准。"}
             </p>
             {confirm.kind === "subscriptions" && (
               <label>

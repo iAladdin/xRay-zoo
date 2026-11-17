@@ -155,6 +155,8 @@ export async function createRotation(
       where: {
         id: nodeId,
         activeIpRotationId: null,
+        activeLifecycleId: null,
+        resourceState: "active",
         publishedAt: { not: null },
         enabled: true,
         address: snapshot.oldAddress,

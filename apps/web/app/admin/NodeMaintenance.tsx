@@ -8,14 +8,24 @@ type Node = {
   enabled: boolean;
   busy: boolean;
   publishedAt: string | null;
+  resourceState: string;
+  lifecycle?: { status: string } | null;
 };
-type Action = "enable" | "disable" | "restart" | "reconnect" | "rotate-ip";
+type Action =
+  | "enable"
+  | "disable"
+  | "restart"
+  | "reconnect"
+  | "rotate-ip"
+  | "release"
+  | "rebuild";
 type Item = {
   nodeId: string;
   name: string;
   status: string;
   message: string;
   rotationId?: string;
+  lifecycleId?: string;
 };
 type Batch = {
   id: string;
@@ -38,8 +48,10 @@ type Preview = {
   message: string;
 };
 const actions: Record<Action, string> = {
-  enable: "批量启用",
-  disable: "批量停用",
+  release: "批量停止并回收",
+  rebuild: "批量启动 / 重建",
+  enable: "批量启用代理",
+  disable: "批量暂停代理",
   restart: "批量重启",
   reconnect: "批量重连",
   "rotate-ip": "批量轮换 IP",
@@ -54,6 +66,10 @@ const states: Record<string, string> = {
   unknown: "结果待核实",
 };
 const description: Record<Action, string> = {
+  release:
+    "停止代理，保留配置和用户权益，释放 VM、磁盘、网卡与公网 IP。当前连接会中断；以后可一键重建。",
+  rebuild:
+    "按保存的区域与规格重新创建机器，使用 32 GiB Standard HDD；安装、真实连接验证成功后，自动加入原订阅机器池。新 IP 需要客户端刷新订阅。",
   enable: "启用所选节点，完成后以最新检测状态为准。",
   disable:
     "停止所选节点服务，并从新下载的订阅配置中移除；连接可能中断，Azure 资源继续计费。",
@@ -87,7 +103,7 @@ export default function NodeMaintenance({
   onRefresh: () => void;
   onRotation: (nodeId: string, rotationId: string) => void;
 }) {
-  const [action, setAction] = useState<Action>("reconnect");
+  const [action, setAction] = useState<Action>("release");
   const [draft, setDraft] = useState<{
     action: Action;
     nodes: Node[];
@@ -102,7 +118,9 @@ export default function NodeMaintenance({
   const [expanded, setExpanded] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const sending = useRef(false);
-  const candidates = nodes.filter((n) => n.publishedAt && !n.busy);
+  const candidates = nodes.filter(
+    (n) => !n.busy || n.lifecycle?.status === "failed",
+  );
   const chosen = nodes.filter((n) => selected.includes(n.id));
   useEffect(() => {
     let canceled = false,
@@ -242,11 +260,13 @@ export default function NodeMaintenance({
           value={action}
           onChange={(e) => setAction(e.target.value as Action)}
         >
-          {Object.entries(actions).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          {Object.entries(actions)
+            .filter(([value]) => !["enable", "disable"].includes(value))
+            .map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
         </select>
         <button
           disabled={!selectedCount || selectedCount > 50}
@@ -262,7 +282,7 @@ export default function NodeMaintenance({
       </div>
       <p className="az-section-note">
         每批最多 50
-        台。任务在后台逐台执行，关闭页面后继续；忙碌或未上线的节点将跳过。
+        台。任务在后台逐台执行，关闭页面后继续；冲突操作会跳过；已回收节点可直接选择重建。
       </p>
       {listError && (
         <p className="az-failure" role="alert">
@@ -296,7 +316,9 @@ export default function NodeMaintenance({
                   <span>
                     {batch.status === "running" ? "执行中" : "处理结束"} ·
                     待处理 {batch.counts.pending} ·{" "}
-                    {batch.action === "rotate-ip" ? "完成" : "已提交"}{" "}
+                    {["rotate-ip", "release", "rebuild"].includes(batch.action)
+                      ? "完成"
+                      : "已提交"}{" "}
                     {batch.counts.succeeded} · 失败/待核实 {batch.counts.failed}{" "}
                     · 跳过 {batch.counts.skipped}
                   </span>
@@ -407,7 +429,7 @@ export default function NodeMaintenance({
             })}
           </ul>
           <p>
-            每台节点独立记录结果，失败不会阻断其他节点。未确认的操作不会自动重放，请先核实节点状态。
+            每台节点独立记录结果，失败不会阻断其他节点。回收与重建可以从已保存的进度重试。
           </p>
           {error && (
             <p className="az-failure" role="alert">

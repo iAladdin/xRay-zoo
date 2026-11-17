@@ -19,6 +19,11 @@ import { db } from "../../../packages/core/db.js";
 import { currentUser } from "../../../packages/core/auth.js";
 import { azure, provisionError } from "../../../packages/core/azure.js";
 import {
+  lifecycleSelect,
+  lifecycleView,
+  retryLifecycle,
+} from "../../../packages/core/node-lifecycle.js";
+import {
   createMaintenance,
   maintenanceView,
 } from "../../../packages/core/node-maintenance.js";
@@ -252,6 +257,11 @@ export class AdminApi {
     const nodes = await db.node.findMany({
       orderBy: { name: "asc" },
       include: {
+        lifecycles: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: lifecycleSelect,
+        },
         ipRotations: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -281,8 +291,14 @@ export class AdminApi {
         usageUpdatedAt: n.usageUpdatedAt,
         xrayVersion: n.xrayVersion,
         busy:
+          !!n.activeLifecycleId ||
           !!n.activeIpRotationId ||
           (!!n.controlLeaseUntil && n.controlLeaseUntil > new Date()),
+        resourceState: n.resourceState,
+        activeLifecycleId: n.activeLifecycleId,
+        lifecycle: n.lifecycles[0] ? lifecycleView(n.lifecycles[0]) : null,
+        diskType: n.diskType,
+        diskSizeGiB: n.diskSizeGiB,
         activeIpRotationId: n.activeIpRotationId,
         ipRotation: n.ipRotations[0] ? rotationView(n.ipRotations[0]) : null,
         publishedAt: n.publishedAt,
@@ -300,6 +316,20 @@ export class AdminApi {
     @Body() body: unknown,
   ) {
     return createMaintenance(req.adminId, body);
+  }
+  @Get("node-lifecycles/:id") async lifecycle(@Param("id") id: string) {
+    const op = await db.nodeLifecycle.findUnique({
+      where: { id: z.string().uuid().parse(id) },
+      select: lifecycleSelect,
+    });
+    if (!op) throw new HttpException("任务不存在", 404);
+    return lifecycleView(op);
+  }
+  @Post("node-lifecycles/:id/retry") retryLifecycle(
+    @Req() req: AdminRequest,
+    @Param("id") id: string,
+  ) {
+    return retryLifecycle(req.adminId, z.string().uuid().parse(id));
   }
   @Get("node-maintenance") async maintenanceList() {
     const [running, recent] = await Promise.all([
@@ -372,10 +402,25 @@ export class AdminApi {
     @Body() body: unknown,
   ) {
     const { action } = z
-      .object({ action: z.enum(["enable", "disable", "restart", "reconnect"]) })
+      .object({
+        action: z.enum([
+          "enable",
+          "disable",
+          "restart",
+          "reconnect",
+          "release",
+          "rebuild",
+        ]),
+      })
       .parse(body);
     if (!(await db.node.findUnique({ where: { id } })))
       throw new HttpException("节点不存在", 404);
+    if (action === "release" || action === "rebuild")
+      return createMaintenance(req.adminId, {
+        action,
+        nodeIds: [id],
+        idempotencyKey: crypto.randomUUID(),
+      });
     try {
       await nodeAction(id, action, req.adminId);
     } catch (e) {

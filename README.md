@@ -8,6 +8,7 @@
 - 默认月套餐：50 / 150 / 300 GB，按足额 Azure 亚洲出网成本 × 10 为 US$60 / US$180 / US$360；[计价假设与市场对照](docs/09-unit-economics.md)。
 - [后台上机器：区域、规格、进度与自动订阅池](docs/14-machine-provisioning.md)
 - [节点 IP 轮换：进度、自动订阅更新、失败重试与回滚](docs/15-ip-rotation.md)
+- [按区域启动、批量回收与一键重建（默认 B2ats_v2 + 32 GiB HDD）](docs/17-disposable-nodes.md)
 - [批量节点维护：多选、后台任务与逐项结果](docs/16-batch-maintenance.md)
 - [管理员后台与节点状态说明](docs/12-admin-console.md)
 - [实际验证结果与限制](docs/10-p0-results.md)

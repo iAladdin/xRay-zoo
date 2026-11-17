@@ -39,6 +39,8 @@ def run_node(item):
         base += ['-o',f'ProxyCommand=/usr/bin/nc -X 5 -x 127.0.0.1:{port} %h %p']
     with open(LOCAL/f'tunnel-{node["code"]}.lock', 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        released=LOCAL/'released-nodes.json'
+        if released.exists() and json.loads(released.read_text()).get(node['name']): command='stop'
         # Read overrides inside the lock, so a queued health check cannot resurrect an old IP.
         overrides=LOCAL/'ip-address-overrides.json'
         override=(json.loads(overrides.read_text()) if overrides.exists() else {}).get(node['name'])
@@ -81,7 +83,9 @@ def main():
     args=p.parse_args()
     nodes=json.loads((LOCAL/'azure-inventory.json').read_text())['nodes']
     extra=LOCAL/'provisioned-tunnels.json'
-    if extra.exists():nodes+=json.loads(extra.read_text())
+    if extra.exists():
+        overrides={n['name']:n for n in json.loads(extra.read_text())}
+        nodes=[overrides.pop(n['name'],n) for n in nodes]+list(overrides.values())
     selected=[(i,n,args.command) for i,n in enumerate(nodes) if args.node is None or n['name']==args.node]
     if not selected: raise SystemExit('Unknown managed node')
     if args.command in ('start','ensure'):ensure_relay()
@@ -91,6 +95,7 @@ def main():
         state=json.loads((LOCAL/'engine-nodes.json').read_text())
         response=engine.request('/nodes'); current=response if isinstance(response,list) else response['nodes']
         for i,n,_ in selected:
+            if n.get('operationId'):continue  # Rebuilt nodes use the retained explicit control port.
             if n['code'] not in state:continue  # New operations register their explicit control endpoint.
             uuid=state[n['code']]['engineNodeId']; desired={'address':n['code']+'.xray-zoo.control','port':22221+i}
             observed=next((v for v in current if v['uuid']==uuid),{})

@@ -114,7 +114,12 @@ const driver: ProvisionDriver = {
         globalPool: true,
         operationId: op.id,
       },
-      update: {},
+      update: {
+        publicKey: "a".repeat(43),
+        shortId: "abcd",
+        address: "192.0.2.2",
+        serverName: "example.com",
+      },
     });
   },
   async verify() {
@@ -191,7 +196,7 @@ try {
   const unpublished = await db.node.findUniqueOrThrow({
     where: { operationId: id },
   });
-  assert.equal(healthState(unpublished), "PROVISIONING");
+  assert.equal(healthState(unpublished), "REBUILDING");
   assert.equal(
     await db.node.count({
       where: nodePoolWhere({ regions: ["DE"], globalPool: true }),
@@ -341,6 +346,7 @@ try {
     await db.node.create({
       data: {
         ...liveNode,
+        deploymentConfig: undefined,
         id: "qa-live-probe",
         name: liveNode.name,
         operationId: liveId,
