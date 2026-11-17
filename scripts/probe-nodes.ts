@@ -29,9 +29,15 @@ const results = await Promise.all(
     const port = 19790 + index;
     const full = buildConfig([{ ...node, ready: true }], access.vlessUuid);
     const path = dir + "/probe.yaml";
+    const outbound = full.proxies.map((p: Record<string, unknown>) => ({
+      ...p,
+      ...(process.env.PROBE_INTERFACE
+        ? { "interface-name": process.env.PROBE_INTERFACE }
+        : {}),
+    }));
     const proxies = transportPort
       ? [
-          ...full.proxies.map((p: object) => ({
+          ...outbound.map((p: object) => ({
             ...p,
             "dialer-proxy": "p0-transport",
           })),
@@ -42,7 +48,7 @@ const results = await Promise.all(
             port: transportPort,
           },
         ]
-      : full.proxies;
+      : outbound;
     writeFileSync(
       path,
       stringify({
@@ -112,8 +118,9 @@ const results = await Promise.all(
         expectedIp: node.address,
         observedIp: trace.ip,
         source,
+        outboundInterface: process.env.PROBE_INTERFACE ?? null,
         transport: transportPort
-          ? "SSH SOCKS relay to public REALITY endpoint"
+          ? "SOCKS relay to public REALITY endpoint"
           : "direct",
         success: trace.ip === node.address,
         at: new Date().toISOString(),

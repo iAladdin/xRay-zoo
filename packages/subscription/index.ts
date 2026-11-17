@@ -87,11 +87,18 @@ export function buildConfig(input: SubscriptionNode[], accessUuid: string) {
         "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
       mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country.mmdb",
     },
-    rules: (baseline.rules as string[]).map((rule) =>
-      rule.startsWith("GEOSITE,")
-        ? rule.replace("GEOSITE,", "RULE-SET,xz-")
-        : rule,
-    ),
+    rules: [
+      ...nodes.map((n) =>
+        /^\d+\.\d+\.\d+\.\d+$/.test(n.address)
+          ? `IP-CIDR,${n.address}/32,DIRECT,no-resolve`
+          : `DOMAIN,${n.address},DIRECT`,
+      ),
+      ...(baseline.rules as string[]).map((rule) =>
+        rule.startsWith("GEOSITE,")
+          ? rule.replace("GEOSITE,", "RULE-SET,xz-")
+          : rule,
+      ),
+    ],
     "proxy-groups": [
       select("🚀 节点选择", ["♻️ 自动选择", ...names, "DIRECT"]),
       auto("♻️ 自动选择", names),

@@ -38,6 +38,9 @@ import {
   type SubscriptionNode,
 } from "../../../packages/subscription/index.js";
 
+import { currentUser } from "../../../packages/core/auth.js";
+import { AdminApi } from "./admin.js";
+
 assertLocalRuntime();
 const credentials = z.object({
   email: z
@@ -52,17 +55,6 @@ const publicUser = (u: { id: string; email: string; role: string }) => ({
   email: u.email,
   role: u.role,
 });
-async function currentUser(req: Request) {
-  const token = req.cookies?.xz_session;
-  if (!token) throw new HttpException("请先登录", 401);
-  const session = await db.session.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: { user: true },
-  });
-  if (!session || session.expiresAt <= new Date())
-    throw new HttpException("登录已过期", 401);
-  return session.user;
-}
 async function issueSession(userId: string, res: Response) {
   const token = randomToken();
   await db.session.create({
@@ -331,6 +323,7 @@ class Api {
     const nodes = await db.node.findMany({
       where: {
         ready: true,
+        enabled: true,
         country: { in: sub.regions },
         checkedAt: { gt: new Date(Date.now() - 120_000) },
       },
@@ -350,22 +343,8 @@ class Api {
       })
       .send(yaml);
   }
-  @Get("admin/nodes") async adminNodes(@Req() req: Request) {
-    if ((await currentUser(req)).role !== "ADMIN")
-      throw new HttpException("无权访问", 403);
-    return db.node.findMany({
-      select: {
-        id: true,
-        name: true,
-        country: true,
-        region: true,
-        ready: true,
-        checkedAt: true,
-      },
-    });
-  }
 }
-@Module({ controllers: [Api] })
+@Module({ controllers: [Api, AdminApi] })
 class AppModule {}
 const app = await NestFactory.create(AppModule, {
   rawBody: true,

@@ -31,7 +31,7 @@ python3 scripts/engine-p0.py configure
 
 `deploy` 校验计划有效期、模板摘要与资源组标签。重复使用稳定资源名；不会为了失败而自动删掉已成功区域。ARM 请求接受不等于部署结束，必须检查 status 和后续探测。Compute / Network provider 需先注册；当前 AAL-Dev 已完成注册。
 
-节点私钥不放进 cloud-init、ARM outputs 或仓库。SSH 私钥和主机指纹在 `.local/`。首次主机指纹采用 accept-new；重新建机造成指纹改变时需要人工核对，脚本不会关闭主机验证。
+节点私钥不放进 cloud-init、ARM outputs 或仓库。SSH 私钥和主机指纹在 `.local/`。初次部署时登记主机指纹；控制隧道现在要求 StrictHostKeyChecking=yes。重新建机造成指纹改变时需要人工核对，脚本不会关闭主机验证。
 
 ## 本机控制隧道
 
@@ -44,7 +44,9 @@ python3 scripts/engine-p0.py export
 pnpm db:seed
 ```
 
-脚本为每区建立独立 SSH 转发 `22221..22225 → VM localhost:2222`，并更新引擎的控制地址。客户端配置始终使用 VM 的公网 IP:443。SSH 断线后重跑 start；这只是本机 P0 运输方案，生产控制面不应依赖笔记本。
+脚本为每区建立独立 SSH 转发 `22221..22225 → VM localhost:2222`，并更新引擎的控制地址。客户端配置始终使用 VM 的公网 IP:443。worker 每约 30 秒检查并恢复断开的隧道，也可在后台点“刷新并重连”。这只是本机 P0 运输方案，生产控制面仍需独立服务器。
+
+如系统代理切换了出口，SSH 的源 IP 可能不再匹配 Azure NSG。可在私有 `.local/control-transport.json` 配置既有管理出口的本地 Mihomo 运输进程，字段为 `binary`（核心绝对路径）与 `socksPort`（例如 19888）；私有 `.local/control-proxy.yaml` 仅绑定 127.0.0.1、关闭 TUN，并为代理绑定真实物理网卡。本机使用 en0，避免控制流量又绕回自己管理的 Azure 节点。两文件均设 0600，含凭证的配置绝不提交。脚本检查 PID 所属命令后才重启/停止自己的进程；stop 前应先停止 worker，否则会被自动恢复。
 
 ## 启动网页闭环
 
@@ -82,11 +84,19 @@ pnpm test
 pnpm exec tsc --noEmit
 pnpm build:web
 pnpm test:integration
+pnpm test:admin
 ```
 
 `customer` 创建单独的 20 GB / 30 天 P0 访问身份。不要把导出 YAML 上传公共仓库，它包含用户访问凭证。需要 Mihomo / Clash Meta；旧 Clash 不支持该配置。规则集初次加载需要连接 GitHub，后续缓存并定时更新。
 
-`scripts/probe-nodes.ts` 为五台节点创建隔离客户端和临时本地端口，不修改系统代理。设置 `MIHOMO_BINARY` 指定客户端路径；默认是本机 mClash 核心。若现有系统代理干扰协议检测，可先建立临时 SSH SOCKS：
+`scripts/probe-nodes.ts` 为五台节点创建隔离客户端和临时本地端口，不修改系统代理。设置 `MIHOMO_BINARY` 指定客户端路径；默认是本机 mClash 核心。若现有 TUN 干扰协议检测，优先显式绑定本机的真实物理网卡（先确认网卡名）：
+
+```sh
+PROBE_INTERFACE=en0 pnpm exec tsx scripts/probe-nodes.ts
+PROBE_INTERFACE=en0 pnpm exec tsx scripts/test-cached-access.ts
+```
+
+本次此方式已验证五区域公网 IP 和地区均匹配。也支持临时 SSH SOCKS（可能仍受本机 TUN 路由影响）：
 
 ```sh
 ssh -f -N -M -S .local/probe-transport.sock -D 127.0.0.1:19789 -i .local/node_ssh -o UserKnownHostsFile=.local/known_hosts xrayzoo@<JP节点IP>
@@ -96,6 +106,10 @@ ssh -S .local/probe-transport.sock -O exit xrayzoo@<JP节点IP>
 ```
 
 第二项测试需要先运行 test:integration 创建仍有效的临时服务期。测试最终停用自己的测试身份；已有长连接的回收不是当前测试范围。
+
+## 管理员后台
+
+访问 `http://localhost:3100/admin`。已有 ADMIN 用户在首页登录后会自动跳转；普通用户不会进入后台，所有管理 API 也会校验身份。账号不自动公开注册为管理员；本机已有运营账号凭证保存在私有 `.local/operator-admin.json`。详细功能与操作语义见 [管理员后台](12-admin-console.md)。
 
 ## 关闭与费用
 

@@ -1,0 +1,910 @@
+.az-shell {
+  --az-muted: #75837d;
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7f4;
+  font-size: 14px;
+  color: #183c36;
+}
+.az-sidebar {
+  width: 222px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  background: #173d35;
+  color: #d2e0d9;
+  padding: 30px 19px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.az-sidebar .brand {
+  color: #fff;
+  font-size: 23px;
+  gap: 9px;
+  padding: 0 10px;
+}
+.az-sidebar .brandmark {
+  background: #d8f467;
+  color: #173d35;
+  width: 32px;
+  height: 32px;
+  font-size: 30px;
+}
+.az-side-label {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  color: #95b0a4;
+  margin: 42px 12px 17px;
+}
+.az-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.az-sidebar nav button {
+  display: flex;
+  justify-content: flex-start;
+  gap: 13px;
+  color: #b7cdc1;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 13px 16px;
+  border-radius: 7px;
+  min-height: 45px;
+  text-align: left;
+}
+.az-sidebar nav button > span {
+  font-size: 19px;
+  width: 20px;
+  line-height: 1;
+}
+.az-sidebar nav button small {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.7;
+}
+.az-sidebar nav button:hover {
+  background: #244b42;
+  color: white;
+}
+.az-sidebar nav button.selected {
+  background: #d8f467;
+  color: #193c30;
+  font-weight: 650;
+}
+.az-side-bottom {
+  margin-top: auto;
+  padding: 30px 13px 0;
+  font-size: 12px;
+  border-top: 1px solid #ffffff18;
+}
+.az-side-bottom small {
+  display: block;
+  color: #91ac9f;
+  font-size: 10px;
+  margin-top: 10px;
+}
+.az-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #d8f467;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+.az-workspace {
+  margin-left: 222px;
+  min-width: 0;
+  width: calc(100% - 222px);
+}
+.az-topbar {
+  height: 76px;
+  padding: 0 36px;
+  background: #ffffffaa;
+  border-bottom: 1px solid #e1e7df;
+  font-size: 12px;
+}
+.az-topbar > span {
+  color: #75837d;
+}
+.az-topbar b {
+  font-weight: 400;
+  padding: 0 13px;
+  color: #bdc8c0;
+}
+.az-topbar > div {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.az-environment {
+  font-size: 10px;
+  border: 1px solid #d7dfd0;
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: #f7f9ee;
+  color: #7b834d;
+}
+.az-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e7eddf;
+  font-size: 11px;
+}
+.az-email {
+  font-size: 11px;
+  color: #556e60;
+}
+.az-main {
+  margin: 0 auto;
+  max-width: 1600px;
+  padding: 34px 36px 0;
+}
+.az-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.az-kicker {
+  font-size: 9px;
+  letter-spacing: 1.7px;
+  color: #7c9184;
+}
+.az-page-heading h1 {
+  font-size: 30px;
+  letter-spacing: -1px;
+  margin: 9px 0;
+  font-weight: 650;
+}
+.az-page-heading p {
+  font-size: 12px;
+  color: var(--az-muted);
+  margin: 0;
+}
+.az-shell button {
+  font-size: 12px;
+  padding: 10px 16px;
+  gap: 8px;
+}
+.az-shell .az-light {
+  background: #fff;
+  color: #345448;
+  border: 1px solid #dce4d8;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.az-shell .az-light:hover {
+  background: #edf1e8;
+}
+.az-refresh {
+  height: 37px;
+}
+.az-timestamp {
+  font-size: 10px;
+  color: #7f8d84;
+  margin: 20px 0;
+}
+.az-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
+}
+.az-stats article {
+  background: white;
+  border: 1px solid #e0e7dc;
+  border-radius: 10px;
+  padding: 22px 24px;
+}
+.az-stats article > span {
+  color: #6d8174;
+  font-size: 12px;
+}
+.az-stats strong {
+  display: block;
+  font-size: 38px;
+  letter-spacing: -1.5px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 13px 0 9px;
+  font-variant-numeric: tabular-nums;
+}
+.az-stats strong small {
+  font-size: 17px;
+  color: #99a797;
+  font-weight: 400;
+  margin-left: 7px;
+  letter-spacing: 0;
+}
+.az-stats p {
+  font-size: 10px;
+  margin: 0;
+  color: #849185;
+}
+.az-stats .az-stat-bytes {
+  font-size: 30px;
+  letter-spacing: -1px;
+  margin-top: 20px;
+}
+.az-section {
+  margin-bottom: 26px;
+  background: white;
+  border: 1px solid #e0e7dc;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.az-section-head {
+  padding: 22px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+.az-section-head h2 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+.az-section-head h2 span {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #90a08f;
+  font-weight: 400;
+  margin-left: 13px;
+}
+.az-section-head > small {
+  font-size: 10px;
+  color: #849185;
+  max-width: 50%;
+  text-align: right;
+}
+.az-shell .az-link {
+  background: transparent;
+  color: #567762;
+  padding: 0;
+  font-weight: 500;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.az-regions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid #edf0e8;
+}
+.az-regions article {
+  padding: 23px 22px;
+  border-right: 1px solid #e6ebe2;
+}
+.az-regions article:last-child {
+  border: 0;
+}
+.az-region-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.az-region-top b {
+  font-size: 24px;
+  letter-spacing: -1px;
+  font-weight: 500;
+  color: #8fa58d;
+}
+.az-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.az-dot.on {
+  background: #6b9a55;
+  box-shadow: 0 0 0 4px #edf4e4;
+}
+.az-dot.off {
+  background: #b88e4e;
+  box-shadow: 0 0 0 4px #faf0df;
+}
+.az-regions h3 {
+  font-size: 17px;
+  margin: 20px 0 4px;
+  font-weight: 600;
+}
+.az-regions p {
+  font-size: 10px;
+  color: #92a08e;
+  margin: 0 0 19px;
+}
+.az-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #edf0e9;
+  color: #6c7c70;
+  white-space: nowrap;
+}
+.az-badge.good {
+  background: #eaf2e2;
+  color: #55723d;
+}
+.az-badge.warn {
+  background: #fbefda;
+  color: #8f6b2e;
+}
+.az-badge.neutral {
+  background: #eef0ec;
+  color: #6e7b70;
+}
+.az-region-footer {
+  font-size: 10px;
+  color: #71816f;
+  border-top: 1px solid #eaf0e5;
+  margin-top: 22px;
+  padding-top: 15px;
+}
+.az-region-footer small {
+  display: block;
+  font-size: 10px;
+  margin-top: 7px;
+  color: #9aa793;
+  font-variant-numeric: tabular-nums;
+}
+.az-overview-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 24px;
+}
+.az-receipts {
+  padding: 3px 24px 21px;
+}
+.az-receipts > span {
+  font-size: 11px;
+  color: #71816f;
+}
+.az-receipts > strong {
+  font-size: 34px;
+  display: block;
+  font-weight: 500;
+  letter-spacing: -1px;
+  margin: 10px 0;
+}
+.az-receipts p {
+  font-size: 10px;
+  color: #8c9987;
+  margin: 0;
+}
+.az-mini-stats {
+  border-top: 1px solid #e6ece1;
+  margin: 0 24px;
+  padding: 20px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.az-mini-stats strong {
+  display: block;
+  font-size: 21px;
+  font-weight: 500;
+}
+.az-mini-stats span {
+  display: block;
+  margin-top: 7px;
+  color: #859280;
+  font-size: 10px;
+}
+.az-activity {
+  padding: 0 24px 15px;
+}
+.az-activity > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf1e8;
+}
+.az-activity > div:last-child {
+  border: 0;
+}
+.az-activity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a5b992;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.az-activity strong {
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+}
+.az-activity small {
+  display: block;
+  font-size: 9px;
+  color: #8c9a86;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.az-activity time {
+  font-size: 9px;
+  margin-left: auto;
+  color: #8c9a86;
+  white-space: nowrap;
+}
+.az-alert {
+  border: 1px solid #dde5d6;
+  border-radius: 7px;
+  background: white;
+  margin: 14px 0;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  gap: 20px;
+}
+.az-alert p {
+  font-size: 11px;
+  margin: 4px 0 0;
+}
+.az-alert.error {
+  color: #994c3e;
+  background: #fff4f0;
+  border-color: #f0d8ce;
+}
+.az-alert.warning {
+  background: #fff9ee;
+  border-color: #eadfc8;
+  color: #8c6b3b;
+}
+.az-alert.success {
+  background: #edf4e7;
+  border-color: #d5e2ca;
+  color: #4e713c;
+}
+.az-alert button {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+.az-table-scroll {
+  overflow-x: auto;
+}
+.az-shell table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+}
+.az-shell th {
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  font-weight: 500;
+  color: #82907c;
+  background: #f8faf5;
+  border-top: 1px solid #e7ede1;
+  border-bottom: 1px solid #e7ede1;
+  padding: 13px 24px;
+  white-space: nowrap;
+}
+.az-shell td {
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf1e8;
+  vertical-align: top;
+  line-height: 1.7;
+}
+.az-shell tr:last-child td {
+  border: 0;
+}
+.az-shell td > strong {
+  font-size: 12px;
+  font-weight: 550;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.az-shell td small {
+  display: block;
+  font-size: 10px;
+  color: #899582;
+  line-height: 1.6;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.az-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 140px;
+}
+.az-row-actions button {
+  background: transparent;
+  color: #567e5d;
+  padding: 0;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.az-row-actions button:hover {
+  text-decoration: underline;
+  background: transparent;
+}
+.az-section-note {
+  padding: 0 24px 18px;
+  font-size: 11px;
+  margin: 0;
+  color: #8b9883;
+}
+.az-search {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.az-search input {
+  margin: 0;
+  background: #f9fbf6;
+  width: 235px;
+  padding: 9px 12px;
+  font-size: 11px;
+}
+.az-search > button {
+  margin: 0;
+  width: auto;
+}
+.az-shell .az-empty {
+  padding: 45px 24px;
+  text-align: center;
+  color: #8d9a86;
+  font-size: 12px;
+}
+.az-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #e7ede1;
+  padding: 16px 24px;
+  font-size: 10px;
+  color: #85937d;
+}
+.az-pagination > div {
+  display: flex;
+  gap: 10px;
+}
+.az-pagination button {
+  font-size: 10px;
+  padding: 7px 12px;
+}
+.az-meter {
+  margin-top: 10px;
+  height: 4px;
+  min-width: 130px;
+  background: #edf1e7;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.az-meter i {
+  display: block;
+  height: 100%;
+  background: #7da46a;
+}
+.az-usage > span {
+  white-space: nowrap;
+  font-size: 11px;
+}
+.az-shell .az-usage small {
+  display: inline;
+  font-size: 10px;
+}
+.az-node-usage {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0 24px 24px;
+  gap: 20px;
+}
+.az-node-usage span {
+  color: #7b8c73;
+  font-size: 10px;
+}
+.az-node-usage strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 500;
+  margin: 12px 0;
+}
+.az-node-usage small {
+  font-size: 9px;
+  color: #8c9987;
+}
+.az-shell .az-pending {
+  color: #ad803a;
+}
+.az-shell .az-failure {
+  color: #ab5946;
+  overflow-wrap: anywhere;
+}
+.az-footer {
+  height: 75px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #e0e7d9;
+  color: #94a08c;
+  padding: 0;
+  font-size: 10px;
+}
+.az-footer span {
+  font-size: 10px;
+}
+.az-loading {
+  padding: 100px;
+  text-align: center;
+  color: #71816f;
+}
+.az-dialog {
+  border: 1px solid #dae3d2;
+  border-radius: 12px;
+  padding: 28px;
+  width: min(520px, calc(100vw - 32px));
+  background: #fff;
+  color: #183c36;
+  box-shadow: 0 25px 100px #102c3522;
+}
+.az-dialog::backdrop {
+  background: #152d2b55;
+  backdrop-filter: blur(3px);
+}
+.az-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.az-dialog-head h2 {
+  font-size: 21px;
+  margin: 0;
+}
+.az-dialog-head button {
+  font-size: 20px;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+}
+.az-dialog p {
+  font-size: 13px;
+  line-height: 1.9;
+}
+.az-dialog .az-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 26px;
+}
+.az-dialog .az-dialog-actions button {
+  font-size: 12px;
+  padding: 11px 17px;
+}
+.az-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.az-dialog fieldset {
+  border: 1px solid #dce4d5;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 5px 12px;
+}
+.az-checks {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.az-checks label,
+.az-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.az-checks input,
+.az-checkbox input {
+  width: auto;
+  margin: 0;
+  accent-color: #365e42;
+}
+.az-dialog input[readonly] {
+  background: #f0f3ec;
+  color: #8a9781;
+}
+.az-dialog :focus-visible {
+  outline: 2px solid #678a54;
+  outline-offset: 3px;
+}
+@media (min-width: 1600px) {
+  .az-main {
+    padding: 42px 52px 0;
+  }
+  .az-topbar {
+    padding: 0 52px;
+  }
+  .az-stats article {
+    padding: 25px 28px;
+  }
+  .az-regions article {
+    padding: 26px 28px;
+  }
+}
+@media (max-width: 1150px) {
+  .az-sidebar {
+    width: 184px;
+    padding: 28px 12px;
+  }
+  .az-sidebar .brand {
+    font-size: 20px;
+  }
+  .az-workspace {
+    margin-left: 184px;
+    width: calc(100% - 184px);
+  }
+  .az-main {
+    padding: 28px 24px 0;
+  }
+  .az-topbar {
+    padding: 0 24px;
+  }
+  .az-email {
+    display: none;
+  }
+  .az-regions article {
+    padding: 20px 13px;
+  }
+  .az-stats {
+    gap: 10px;
+  }
+  .az-stats article {
+    padding: 18px 15px;
+  }
+  .az-stats strong {
+    font-size: 32px;
+  }
+  .az-overview-bottom {
+    grid-template-columns: 1fr;
+  }
+  .az-shell td,
+  .az-shell th {
+    padding: 16px;
+  }
+  .az-regions .az-badge {
+    font-size: 9px;
+  }
+  .az-node-usage {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 750px) {
+  .az-shell {
+    display: block;
+  }
+  .az-sidebar {
+    position: static;
+    width: 100%;
+    padding: 18px 16px;
+  }
+  .az-sidebar .brand {
+    font-size: 21px;
+  }
+  .az-side-label,
+  .az-side-bottom {
+    display: none;
+  }
+  .az-sidebar nav {
+    flex-direction: row;
+    overflow-x: auto;
+    margin-top: 17px;
+    gap: 5px;
+  }
+  .az-sidebar nav button {
+    padding: 9px 12px;
+    min-height: 35px;
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+  .az-sidebar nav button > span,
+  .az-sidebar nav button small {
+    display: none;
+  }
+  .az-workspace {
+    margin: 0;
+    width: 100%;
+  }
+  .az-main {
+    padding: 24px 16px 0;
+  }
+  .az-topbar {
+    height: 56px;
+    padding: 0 16px;
+  }
+  .az-topbar > span,
+  .az-avatar {
+    display: none;
+  }
+  .az-topbar > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .az-page-heading h1 {
+    font-size: 27px;
+  }
+  .az-page-heading p {
+    max-width: 260px;
+    font-size: 11px;
+  }
+  .az-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .az-stats strong {
+    font-size: 32px;
+  }
+  .az-stats .az-stat-bytes {
+    font-size: 25px;
+  }
+  .az-regions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .az-regions article {
+    padding: 20px;
+    border-bottom: 1px solid #e6ebe2;
+  }
+  .az-regions article:last-child {
+    grid-column: span 2;
+  }
+  .az-section-head {
+    padding: 18px 16px;
+    flex-wrap: wrap;
+  }
+  .az-section-head > small {
+    max-width: 100%;
+    text-align: left;
+  }
+  .az-search {
+    width: 100%;
+  }
+  .az-search input {
+    width: 100%;
+    min-width: 0;
+  }
+  .az-node-usage {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 16px 20px;
+  }
+  .az-shell table {
+    min-width: 630px;
+  }
+  .az-alert {
+    font-size: 11px;
+  }
+  .az-footer {
+    height: auto;
+    min-height: 70px;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 18px 0;
+  }
+  .az-activity time {
+    font-size: 8px;
+  }
+  .az-page-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .az-refresh {
+    font-size: 10px !important;
+    padding: 8px 10px !important;
+  }
+  .az-dialog {
+    padding: 22px;
+  }
+}

@@ -2,11 +2,12 @@
 
 面向自营订阅业务的 Xray 集群控制台。管理员连接 Azure、选择地区并创建节点，用户购买套餐后获得可导入 Mihomo / Clash Meta 客户端的订阅链接。
 
-**当前阶段：P0 节点验证与本地最小购买闭环。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
+**当前阶段：P0 节点验证、本地购买闭环与管理员后台。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
 
+- [管理员后台与节点状态说明](docs/12-admin-console.md)
 - [实际验证结果与限制](docs/10-p0-results.md)
 - [本地运行、Azure 部署与恢复](docs/11-local-runbook.md)
-- 网页：`http://localhost:3100`；API：`http://localhost:3101`。
+- 网页：`http://localhost:3100`；管理员：`http://localhost:3100/admin`；API：`http://localhost:3101`。管理员登录后自动进入后台，可查看五区域节点、用户、套餐、订单、用量并管理订阅。
 - 私有节点状态、Azure/Stripe 凭证和导出访问身份均在被 Git 忽略的 `.local/`；不得提交。
 
 ## 首版目标
@@ -54,24 +55,23 @@
 - [配置说明与导出边界](examples/README.md)
 - [未来应用环境变量](.env.example)
 
-这些文件用于明确输入和输出形状；当前没有模板渲染器或部署命令。`${...}` 均为占位符，不能直接用于生产。
+这些 example 文件用于说明目标输入和输出形状，`${...}` 是占位符。实际 P0 部署和订阅渲染命令见运行手册，渲染结果包含访问凭证，不能提交。
 
-## 代码布局规划
+## 当前代码布局
 
 ```text
-apps/web/                   # 商城、用户中心、管理员控制台
-apps/api/                   # 权限、套餐、订单、订阅和云连接
-apps/worker/                # 支付事件、节点编排、对账和周期任务
-packages/domain/            # 领域约束与共享类型
-packages/engine-remnawave/  # 唯一的节点管理系统边界
-packages/cloud-azure/       # Azure 资源编排
-packages/subscription/      # Mihomo 配置渲染
-infra/azure/                # Bicep 资源模块
-infra/control-plane/        # 控制服务部署与备份
+apps/web/                  # 商城、账户与管理员后台
+apps/api/                  # 登录、RBAC、订单、订阅和管理员 API
+apps/worker/               # 支付、授权同步、流量采集与节点控制重连
+packages/core/             # 账本、授权、加密、节点检测
+packages/engine-remnawave/ # 引擎适配器
+packages/subscription/     # tc split Mihomo 配置渲染
+prisma/                    # PostgreSQL 数据模型与迁移
+scripts/                   # P0 Azure 编排、本地启动与验证
+infra/azure/               # Bicep 节点资源
+infra/local/               # 本地 Docker Compose
 ```
-
-目录按实际开发创建，本次提交不放空壳应用。开始实现时先完成 [P0 技术验证](docs/08-delivery-plan.md)，再实现一条真实的购买到联网链路。
 
 ## 项目与依赖许可
 
-本次只提交原创文档和占位模板，未复制上游实现代码。项目尚未选定开源许可证。上游许可和复用边界记录在 [调研文档](docs/02-research.md)，独立部署与 API 调用不应被当成自动免除上游许可义务的保证。
+本仓库包含原创业务代码、设计文档和配置模板；Remnawave 与 Mihomo 通过独立服务或客户端使用。项目尚未选定开源许可证。上游许可和复用边界记录在 [调研文档](docs/02-research.md)，独立部署与 API 调用不应被当成自动免除上游许可义务的保证。

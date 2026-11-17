@@ -129,4 +129,24 @@ model Node {
   squadId String?
   ready Boolean @default(false)
   checkedAt DateTime?
+  enabled Boolean @default(true)
+  engineConnected Boolean @default(false)
+  engineDisabled Boolean @default(false)
+  transportConnected Boolean?
+  healthReason String @default("UNKNOWN")
+  lastHealthyAt DateTime?
+  usageBytes BigInt @default(0)
+  usageUpdatedAt DateTime?
+  xrayVersion String?
+  controlLeaseOwner String?
+  controlLeaseUntil DateTime?
+}
+model AuditLog {
+  id String @id @default(uuid())
+  actorId String
+  action String
+  targetId String
+  detail Json
+  createdAt DateTime @default(now())
+  @@index([createdAt])
 }

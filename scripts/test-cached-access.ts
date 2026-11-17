@@ -51,15 +51,21 @@ try {
     unseal(active.accessUuidCipher!),
   );
   const port = Number(process.env.PROBE_SOCKS_PORT || 0);
+  const outbound = full.proxies.map((p: Record<string, unknown>) => ({
+    ...p,
+    ...(process.env.PROBE_INTERFACE
+      ? { "interface-name": process.env.PROBE_INTERFACE }
+      : {}),
+  }));
   const proxies = port
     ? [
-        ...full.proxies.map((p: object) => ({
+        ...outbound.map((p: object) => ({
           ...p,
           "dialer-proxy": "transport",
         })),
         { name: "transport", type: "socks5", server: "127.0.0.1", port },
       ]
-    : full.proxies;
+    : outbound;
   writeFileSync(
     dir + "/cached.yaml",
     stringify({

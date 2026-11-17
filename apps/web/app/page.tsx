@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 const API = "http://localhost:3101";
 type Account = {
-  user: { email: string };
+  user: { email: string; role: string };
   subscription: null | {
     status: string;
     validUntil: string;
@@ -41,6 +42,7 @@ const regions = [
   { code: "TW", name: "台湾", city: "Taiwan North", category: "Telegram" },
 ];
 export default function Home() {
+  const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null),
     [plans, setPlans] = useState<Plan[]>([]),
     [provider, setProvider] = useState(""),
@@ -50,12 +52,19 @@ export default function Home() {
     [checkoutId, setCheckoutId] = useState("");
   async function refresh() {
     try {
-      setAccount(await call("/me"));
+      const result = await call("/me");
+      if (result.user.role === "ADMIN") {
+        router.replace("/admin");
+        return;
+      }
+      setAccount(result);
     } catch {
       setAccount(null);
     }
   }
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("login"))
+      setLogin(true);
     call("/plans")
       .then((v) => {
         setPlans(v.plans);

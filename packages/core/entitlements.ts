@@ -66,12 +66,21 @@ export async function syncEntitlement(subscriptionId: string) {
       return;
     }
     const nodes = await db.node.findMany({
-      where: { ready: true, country: { in: period.order.regions } },
+      where: { enabled: true, country: { in: period.order.regions } },
     });
     const squads = [
       ...new Set(nodes.map((n) => n.squadId).filter((s): s is string => !!s)),
     ];
-    if (!nodes.length || !squads.length) throw new Error("NO_READY_NODES");
+    // Transient control outages must not remove paid users from regional squads.
+    // No enabled regions: retain entitlement, disable access until an operator enables a node.
+    if (!squads.length) {
+      if (user)
+        await engine.updateUser(username, {
+          status: "DISABLED",
+          activeInternalSquads: [],
+        });
+      throw new Error("NO_ENABLED_NODES");
+    }
     if (!user)
       user = await engine.ensureUser(username, {
         status: "DISABLED",

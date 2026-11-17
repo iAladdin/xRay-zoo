@@ -4,7 +4,10 @@ import { db } from "../../../packages/core/db.js";
 import { settings, assertLocalRuntime } from "../../../packages/core/config.js";
 import { processPayment } from "../../../packages/core/billing.js";
 import { syncEntitlement } from "../../../packages/core/entitlements.js";
-import { engine } from "../../../packages/engine-remnawave/client.js";
+import {
+  refreshNodeHealth,
+  reconcileDisabledNodes,
+} from "../../../packages/core/node-health.js";
 assertLocalRuntime();
 const connection = new Redis(settings.redis.toString(), {
   maxRetriesPerRequest: null,
@@ -55,26 +58,11 @@ async function reconcile() {
     }
     if (tick++ % 6 === 0) {
       try {
-        const response = await engine.request<
-          | { uuid: string; isConnected: boolean; isDisabled: boolean }[]
-          | {
-              nodes: {
-                uuid: string;
-                isConnected: boolean;
-                isDisabled: boolean;
-              }[];
-            }
-        >("/nodes");
-        const nodes = Array.isArray(response) ? response : response.nodes;
-        await db.node.updateMany({ data: { ready: false } });
-        for (const node of nodes)
-          await db.node.updateMany({
-            where: { engineNodeId: node.uuid },
-            data: {
-              ready: node.isConnected && !node.isDisabled,
-              checkedAt: new Date(),
-            },
-          });
+        try {
+          await reconcileDisabledNodes();
+        } finally {
+          await refreshNodeHealth(true);
+        }
       } catch {
         console.error("node health refresh failed");
       }
