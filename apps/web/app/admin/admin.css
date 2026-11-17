@@ -1231,6 +1231,47 @@
 .az-fleet {
   margin-bottom: 20px;
 }
+.az-region-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 20px;
+}
+.az-region-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.az-region-dialog > :not(.az-region-grid) {
+  flex-shrink: 0;
+}
+.az-region-dialog .az-dialog-head h2 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+.az-region-dialog p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.az-region-dialog .az-region-intro {
+  margin: 10px 0 14px;
+}
+.az-region-dialog .az-region-count {
+  margin: 10px 0 8px;
+  font-size: 11px;
+}
+.az-region-dialog .az-region-note {
+  margin: 10px 0 0;
+  color: #75837d;
+  font-size: 11px;
+}
+.az-region-dialog .az-dialog-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e4e9e0;
+  gap: 8px;
+}
+.az-region-dialog .az-dialog-actions button {
+  padding: 9px 14px;
+}
 .az-fleet-filter {
   display: flex;
   gap: 8px;
@@ -1239,37 +1280,66 @@
 .az-fleet-filter input {
   flex: 1;
   min-width: 200px;
-  padding: 10px 12px;
+  margin: 0;
+  padding: 8px 10px;
   border: 1px solid #d6d9d6;
-  border-radius: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.az-fleet-filter button {
+  padding: 8px 11px;
+  font-size: 12px;
 }
 .az-region-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  max-height: 380px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  max-height: 400px;
   overflow-y: auto;
-  margin: 16px 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  margin: 0;
+  padding: 3px;
 }
 .az-region-option {
   display: flex;
-  gap: 10px;
-  padding: 12px;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 10px;
   border: 1px solid #dce1dc;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
+}
+.az-region-option:not(.unavailable):hover {
+  border-color: #96b39d;
+  background: #f6faf5;
 }
 .az-region-option:has(input:checked) {
   background: #edf6f0;
   border-color: #769d86;
 }
-.az-region-option input {
-  margin-top: 4px;
-  align-self: flex-start;
+.az-region-option input[type="checkbox"] {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: #365e42;
 }
 .az-region-option span {
   display: grid;
-  gap: 4px;
+  min-width: 0;
+  gap: 2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.az-region-option strong {
+  font-size: 12px;
+  color: #254a3e;
 }
 .az-region-option small {
   font-size: 11px;
@@ -1287,6 +1357,18 @@
   color: #627169;
 }
 @media (max-width: 720px) {
+  .az-region-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .az-fleet-filter input {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+}
+@media (max-width: 480px) {
+  .az-region-dialog {
+    padding: 14px;
+  }
   .az-region-grid {
     grid-template-columns: 1fr;
   }

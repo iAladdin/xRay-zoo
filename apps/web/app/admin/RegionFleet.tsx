@@ -148,7 +148,7 @@ export default function RegionFleet({
       )}
       {mode && (
         <dialog
-          className="az-dialog az-machine-dialog"
+          className={`az-dialog az-machine-dialog${mode === "start" ? " az-region-dialog" : ""}`}
           ref={dialog}
           aria-labelledby="fleet-title"
           onCancel={(e) => {
@@ -174,9 +174,9 @@ export default function RegionFleet({
           </div>
           {mode === "start" ? (
             <>
-              <p>
-                每个选定区域保持一台机器；已有机器会跳过，已回收的节点沿用保留配置重建。默认
-                B2ats_v2 + 32 GiB HDD，按 Azure 区域价格计费。
+              <p className="az-region-intro">
+                默认 B2ats_v2 + 32 GiB
+                HDD，按区域计费。每区一台，已有机器跳过，已回收节点沿用配置重建。
               </p>
               <div className="az-fleet-filter">
                 <input
@@ -211,7 +211,7 @@ export default function RegionFleet({
                   清空
                 </button>
               </div>
-              <p role="status">
+              <p role="status" className="az-region-count">
                 {loading
                   ? "正在读取 Azure 订阅可选区域…"
                   : `已选 ${selected.length} 个区域 · 最多 50 个`}
@@ -266,8 +266,8 @@ export default function RegionFleet({
                   );
                 })}
               </div>
-              <p className="az-section-note">
-                启动前逐区核验规格、配额和镜像；某一区域失败不影响其他区域，结果会显示具体原因。
+              <p className="az-region-note">
+                启动前逐区核验规格、配额和镜像；单区失败不影响其他区域。
               </p>
             </>
           ) : (
