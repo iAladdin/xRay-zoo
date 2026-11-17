@@ -33,13 +33,14 @@ import {
   acceptStripeEvent,
   stripeClient,
 } from "../../../packages/core/stripe.js";
-import {
-  renderSubscription,
-  type SubscriptionNode,
-} from "../../../packages/subscription/index.js";
 
 import { currentUser } from "../../../packages/core/auth.js";
 import { AdminApi } from "./admin.js";
+import { AccountApi } from "./account.js";
+import {
+  canDownload,
+  sendConfig,
+} from "../../../packages/core/subscription-access.js";
 
 assertLocalRuntime();
 const credentials = z.object({
@@ -143,11 +144,7 @@ class Api {
     const subscription = await db.subscription.findUnique({
       where: { userId: user.id },
     });
-    const active =
-      subscription?.status === "active" &&
-      subscription.validUntil &&
-      subscription.validUntil > new Date() &&
-      subscription.appliedVersion === subscription.desiredVersion;
+    const active = canDownload(subscription);
     return {
       user: publicUser(user),
       subscription: subscription
@@ -310,41 +307,10 @@ class Api {
     const sub = await db.subscription.findUnique({
       where: { tokenHash: hashToken(token) },
     });
-    if (
-      !sub ||
-      sub.status !== "active" ||
-      !sub.validUntil ||
-      sub.validUntil <= new Date() ||
-      sub.usedBytes >= sub.quotaBytes ||
-      sub.appliedVersion !== sub.desiredVersion ||
-      !sub.accessUuidCipher
-    )
-      throw new HttpException("订阅无效或已到期", 403);
-    const nodes = await db.node.findMany({
-      where: {
-        ready: true,
-        enabled: true,
-        country: { in: sub.regions },
-        checkedAt: { gt: new Date(Date.now() - 120_000) },
-      },
-    });
-    if (!nodes.length) throw new HttpException("节点状态正在确认", 503);
-    const yaml = renderSubscription(
-      nodes as SubscriptionNode[],
-      unseal(sub.accessUuidCipher),
-    );
-    res
-      .set({
-        "Cache-Control": "private, no-store",
-        "Content-Type": "text/yaml; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="xray-zoo.yaml"',
-        "subscription-userinfo": `upload=0; download=${sub.usedBytes}; total=${sub.quotaBytes}; expire=${Math.floor(sub.validUntil.getTime() / 1000)}`,
-        "profile-update-interval": "1",
-      })
-      .send(yaml);
+    return sendConfig(sub, res);
   }
 }
-@Module({ controllers: [Api, AdminApi] })
+@Module({ controllers: [Api, AdminApi, AccountApi] })
 class AppModule {}
 const app = await NestFactory.create(AppModule, {
   rawBody: true,

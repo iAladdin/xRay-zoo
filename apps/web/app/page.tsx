@@ -57,6 +57,7 @@ export default function Home() {
         router.replace("/admin");
         return;
       }
+      router.replace("/account" + window.location.search);
       setAccount(result);
     } catch {
       setAccount(null);

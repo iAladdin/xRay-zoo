@@ -129,6 +129,8 @@ const labels: Record<string, string> = {
   paid: "已付款",
   suspended: "已暂停",
   expired: "已到期",
+  revoked: "用户已撤销",
+  regenerating: "重新生成中",
   exhausted: "流量耗尽",
   CUSTOMER: "订阅用户",
   ADMIN: "管理员",
@@ -144,6 +146,8 @@ const actionLabel: Record<string, string> = {
   "rotate-link": "重置订阅链接",
 };
 const auditLabels: Record<string, string> = {
+  "subscription.customer-revoke": "用户撤销访问",
+  "subscription.customer-regenerate": "用户重新生成配置",
   "subscription.suspend": "暂停订阅",
   "subscription.resume": "恢复订阅",
   "subscription.retry": "重新同步订阅",
@@ -551,6 +555,9 @@ export default function Admin() {
             <span className="az-environment">
               {overview?.paymentMode ?? "测试环境"}
             </span>
+            <a href="/account" className="az-link">
+              用户中心 ↗
+            </a>
             <span className="az-avatar">A</span>
             <span className="az-email">{email}</span>
             <button

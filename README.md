@@ -2,12 +2,13 @@
 
 面向自营订阅业务的 Xray 集群控制台。管理员连接 Azure、选择地区并创建节点，用户购买套餐后获得可导入 Mihomo / Clash Meta 客户端的订阅链接。
 
-**当前阶段：P0 节点验证、本地购买闭环与管理员后台。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
+**当前阶段：P0 节点验证、本地购买闭环、用户中心与管理员后台。** 已部署 Azure JP / SG / US / HK / TW 五台节点，完成 Mihomo 实际出站、Stripe Sandbox 付款回调、自动开通与订阅链接生成。网页和控制面运行在本机；正式收款、公网 SaaS 和完整运营能力尚未发布。
 
+- [普通用户中心与访问撤销](docs/13-customer-account.md)
 - [管理员后台与节点状态说明](docs/12-admin-console.md)
 - [实际验证结果与限制](docs/10-p0-results.md)
 - [本地运行、Azure 部署与恢复](docs/11-local-runbook.md)
-- 网页：`http://localhost:3100`；管理员：`http://localhost:3100/admin`；API：`http://localhost:3101`。管理员登录后自动进入后台，可查看五区域节点、用户、套餐、订单、用量并管理订阅。
+- 网页：`http://localhost:3100`；用户中心：`http://localhost:3100/account`；管理员：`http://localhost:3100/admin`；API：`http://localhost:3101`。管理员登录后自动进入后台，可查看五区域节点、用户、套餐、订单、用量并管理订阅。
 - 私有节点状态、Azure/Stripe 凭证和导出访问身份均在被 Git 忽略的 `.local/`；不得提交。
 
 ## 首版目标

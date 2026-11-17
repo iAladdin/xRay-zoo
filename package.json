@@ -19,7 +19,8 @@
     "test": "tsx --test tests/*.test.ts",
     "test:integration": "tsx scripts/integration.ts",
     "subscription:render": "tsx scripts/render-subscription.ts",
-    "test:admin": "tsx scripts/test-admin.ts"
+    "test:admin": "tsx scripts/test-admin.ts",
+    "test:account": "tsx scripts/test-account.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.5.1",

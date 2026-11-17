@@ -332,6 +332,7 @@ export class AdminApi {
     if (!sub) throw new HttpException("订阅不存在", 404);
     if (
       sub.status !== "active" ||
+      !!sub.revokedAt ||
       !sub.validUntil ||
       sub.validUntil <= new Date() ||
       sub.usedBytes >= sub.quotaBytes ||

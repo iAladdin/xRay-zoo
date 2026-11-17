@@ -73,6 +73,7 @@ model Subscription {
   appliedVersion Int @default(0)
   engineUserId String? @unique
   accessUuidCipher String?
+  revokedAt DateTime?
   tokenHash String? @unique
   tokenCipher String?
   validUntil DateTime?

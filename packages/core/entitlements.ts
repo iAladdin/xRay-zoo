@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "./db.js";
 import { engine, type EngineUser } from "../engine-remnawave/client.js";
-import { randomToken, hashToken, seal } from "./crypto.js";
+import { randomToken, hashToken, seal, unseal } from "./crypto.js";
 
 export const engineUsername = (subscriptionId: string) =>
   "xz_" + subscriptionId.replaceAll("-", "");
@@ -44,13 +44,45 @@ export async function syncEntitlement(subscriptionId: string) {
     });
     const username = engineUsername(sub.id);
     let user = await engine.findUser(username);
-    if (!period || sub.status === "suspended") {
+    const regenerating = sub.status === "regenerating";
+    if (
+      !period ||
+      sub.status === "suspended" ||
+      (sub.revokedAt && !regenerating)
+    ) {
       if (user) {
         await engine.updateUser(username, { status: "DISABLED" });
         const observed = await engine.findUser(username);
         if (observed?.status === "ACTIVE")
           throw new Error("ENGINE_REVOCATION_PENDING");
+        user = observed;
       }
+      // Paid periods can renew while access remains revoked. Keep the customer's
+      // entitlement display and meter current without granting access again.
+      const lifetime = user ? usageOf(user) : null;
+      const baseline =
+        period && sub.currentPeriodId !== period.id
+          ? (lifetime ?? 0n)
+          : sub.meterBaseline;
+      if (lifetime !== null && lifetime < baseline)
+        throw new Error("ENGINE_COUNTER_RESET_REQUIRES_RECONCILIATION");
+      const revokedPeriod =
+        period && sub.revokedAt
+          ? {
+              validUntil: period.endAt,
+              quotaBytes: period.quotaBytes,
+              regions: period.order.regions,
+              currentPeriodId: period.id,
+              meterBaseline: baseline,
+              usedBytes:
+                lifetime !== null
+                  ? lifetime - baseline
+                  : sub.currentPeriodId === period.id
+                    ? sub.usedBytes
+                    : 0n,
+              ...(user ? { lastUsageAt: new Date() } : {}),
+            }
+          : {};
       await db.subscription.updateMany({
         where: {
           id: sub.id,
@@ -58,7 +90,13 @@ export async function syncEntitlement(subscriptionId: string) {
           syncLeaseOwner: leaseOwner,
         },
         data: {
-          status: sub.status === "suspended" ? "suspended" : "expired",
+          ...revokedPeriod,
+          status:
+            sub.status === "suspended"
+              ? "suspended"
+              : sub.revokedAt
+                ? "revoked"
+                : "expired",
           appliedVersion: sub.desiredVersion,
           lastError: null,
         },
@@ -89,6 +127,19 @@ export async function syncEntitlement(subscriptionId: string) {
         trafficLimitStrategy: "NO_RESET",
         activeInternalSquads: squads,
       });
+    // Remember the previous UUID in accessUuidCipher until the whole rotation is applied.
+    // A retry after the provider rotated successfully detects the changed UUID and does not rotate twice.
+    if (regenerating && sub.accessUuidCipher) {
+      const previous = unseal(sub.accessUuidCipher);
+      if (user.vlessUuid === previous)
+        await engine.request(`/users/${user.id}/actions/revoke`, "POST", {
+          revokeOnlyPasswords: true,
+        });
+      const rotated = await engine.findUser(username);
+      if (!rotated || rotated.vlessUuid === previous)
+        throw new Error("ENGINE_ROTATION_PENDING");
+      user = rotated;
+    }
     const lifetime = usageOf(user);
     const baseline =
       sub.currentPeriodId === period.id ? sub.meterBaseline : lifetime;
@@ -129,6 +180,7 @@ export async function syncEntitlement(subscriptionId: string) {
       },
       data: {
         engineUserId: String(user.id),
+        revokedAt: null,
         accessUuidCipher: seal(observed.vlessUuid),
         ...(token
           ? { tokenHash: hashToken(token), tokenCipher: seal(token) }
